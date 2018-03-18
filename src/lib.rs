@@ -25,12 +25,15 @@ extern crate tokio_core;
 extern crate uuid;
 
 extern crate lettre;
-//extern crate lettre_email;
+extern crate lettre_email;
 //extern crate mime;
+
+extern crate native_tls;
 
 pub mod config;
 pub mod controller;
 pub mod services;
+pub mod models;
 
 use stq_http::client::Client as HttpClient;
 use stq_http::controller::Application;
@@ -38,6 +41,7 @@ use stq_http::controller::Application;
 
 use futures::prelude::*;
 use futures::future;
+use futures_cpupool::CpuPool;
 use hyper::server::Http;
 use std::sync::Arc;
 use std::process;
@@ -48,6 +52,8 @@ pub fn start_server(config: config::Config) {
     // Prepare logger
     env_logger::init().unwrap();
 
+    let thread_count = config.server.thread_count.clone();
+    let cpu_pool = CpuPool::new(thread_count);
     // Prepare reactor
     let mut core = Core::new().expect("Unexpected error creating event loop core");
     let handle = Arc::new(core.handle());
@@ -76,6 +82,7 @@ pub fn start_server(config: config::Config) {
                 let app = Application {
                     controller: Box::new(controller::ControllerImpl::new(
                         config.clone(),
+                        cpu_pool.clone(),
                         client_handle.clone(),
                     )),
                 };

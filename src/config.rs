@@ -8,22 +8,12 @@ use config_crate::{Config as RawConfig, ConfigError, Environment, File};
 pub struct Config {
     pub server: Server,
     pub client: Client,
-    pub saga_addr: SagaAddr,
-    pub jwt: JWT,
-    pub google: OAuth,
-    pub facebook: OAuth,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct SagaAddr {
-    pub url: String
 }
 
 /// Common server settings
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
     pub address: String,
-    pub database: String,
     pub thread_count: usize,
 }
 
@@ -33,18 +23,6 @@ pub struct Client {
     pub http_client_retries: usize,
     pub http_client_buffer_size: usize,
     pub dns_worker_thread_count: usize,
-}
-
-/// Json Web Token seettings
-#[derive(Debug, Deserialize, Clone)]
-pub struct JWT {
-    pub secret_key: String,
-}
-
-/// Oauth 2.0 basic settings
-#[derive(Debug, Deserialize, Clone)]
-pub struct OAuth {
-    pub info_url: String,
 }
 
 /// Creates new app config struct
@@ -64,7 +42,7 @@ impl Config {
         s.merge(File::with_name(&format!("config/{}", env)).required(false))?;
 
         // Add in settings from the environment (with a prefix of STQ_USERS)
-        s.merge(Environment::with_prefix("STQ_USERS"))?;
+        s.merge(Environment::with_prefix("STQ_NOTIF"))?;
 
         s.try_into()
     }

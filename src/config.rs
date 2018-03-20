@@ -8,6 +8,7 @@ use config_crate::{Config as RawConfig, ConfigError, Environment, File};
 pub struct Config {
     pub server: Server,
     pub client: Client,
+    pub smtp: SmtpConf,
 }
 
 /// Common server settings
@@ -23,6 +24,18 @@ pub struct Client {
     pub http_client_retries: usize,
     pub http_client_buffer_size: usize,
     pub dns_worker_thread_count: usize,
+}
+
+/// Smtp client settings
+#[derive(Debug, Deserialize, Clone)]
+pub struct SmtpConf {
+    pub smtp_sock_addr: String,
+    pub smtp_domain: String,
+    pub require_tls: bool,
+    pub hello_name: String,
+    pub timeout_secs: u64,
+    pub username: String,
+    pub password: String,
 }
 
 /// Creates new app config struct

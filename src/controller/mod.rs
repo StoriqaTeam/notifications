@@ -3,8 +3,7 @@ pub mod routes;
 use futures::prelude::*;
 use futures::future;
 use futures_cpupool::CpuPool;
-use hyper::Method;
-use hyper::{Delete, Get, Post, Put};
+use hyper::{Get, Post};
 use hyper::server::Request;
 use std::sync::Arc;
 
@@ -19,7 +18,6 @@ use config;
 
 use models;
 use self::routes::Route;
-use lettre::SmtpTransport;
 use services::system::{SystemService, SystemServiceImpl};
 use services::mail::{MailService, MailServiceImpl};
 
@@ -49,6 +47,7 @@ impl Controller for ControllerImpl {
 
         let mail_service = MailServiceImpl::new(
             self.cpu_pool.clone(),
+            self.config.smtp.clone(),
         );
 
         match (req.method(), self.route_parser.test(req.path())) {
@@ -56,8 +55,8 @@ impl Controller for ControllerImpl {
             // GET /healthcheck
             (&Get, Some(Route::Healthcheck)) => serialize_future(system_service.healthcheck()),
 
-            // POST /mail/simple
-            (&Post, Some(Route::SimpleMail)) => serialize_future(
+            // POST /sendmail
+            (&Post, Some(Route::SendMail)) => serialize_future(
                 parse_body::<models::SimpleMail>(req.body())
                     .map_err(|e| ControllerError::UnprocessableEntity(e.into()))
                     .and_then(move |mail| {

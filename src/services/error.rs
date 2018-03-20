@@ -1,5 +1,3 @@
-use failure::Error;
-
 use stq_http::errors::ControllerError;
 
 #[derive(Debug, Fail)]

@@ -4,7 +4,7 @@ use stq_router::RouteParser;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Route {
     Healthcheck,
-    SimpleMail,
+    SendMail,
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
@@ -14,7 +14,7 @@ pub fn create_route_parser() -> RouteParser<Route> {
     router.add_route(r"^/healthcheck$", || Route::Healthcheck);
 
     // Simple Mail
-    router.add_route(r"^/mail/simple$", || Route::SimpleMail);
+    router.add_route(r"^/sendmail$", || Route::SendMail);
 
     router
 }

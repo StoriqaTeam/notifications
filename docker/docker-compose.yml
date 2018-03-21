@@ -1,0 +1,24 @@
+version: '3'
+services:
+  notifications:
+    image: notifications
+    build:
+      context: .
+      dockerfile: Dockerfile.notif
+    container_name: notifications
+    working_dir: /app
+    command: ["sh", "-c", "cargo run"]
+    volumes:
+      - ..:/app
+      - notifications_cargo_cache:/usr/local/cargo
+    expose:
+      - 8005
+    stdin_open: true
+
+volumes:
+  notifications_cargo_cache:
+
+networks:
+  default:
+    external:
+      name: storiqa

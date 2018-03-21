@@ -8,7 +8,7 @@ use hyper::server::Request;
 use std::sync::Arc;
 
 use stq_http::client::ClientHandle as HttpClientHandle;
-use stq_http::controller::{Controller};
+use stq_http::controller::Controller;
 use stq_http::errors::ControllerError;
 use stq_http::request_util::{parse_body, ControllerFuture};
 use stq_http::request_util::serialize_future;
@@ -45,13 +45,9 @@ impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
         let system_service = SystemServiceImpl::new();
 
-        let mail_service = MailServiceImpl::new(
-            self.cpu_pool.clone(),
-            self.config.smtp.clone(),
-        );
+        let mail_service = MailServiceImpl::new(self.cpu_pool.clone(), self.config.smtp.clone());
 
         match (req.method(), self.route_parser.test(req.path())) {
-
             // GET /healthcheck
             (&Get, Some(Route::Healthcheck)) => serialize_future(system_service.healthcheck()),
 
@@ -59,11 +55,7 @@ impl Controller for ControllerImpl {
             (&Post, Some(Route::SendMail)) => serialize_future(
                 parse_body::<models::SimpleMail>(req.body())
                     .map_err(|e| ControllerError::UnprocessableEntity(e.into()))
-                    .and_then(move |mail| {
-                        mail_service
-                            .send_simple_mail(mail)
-                            .map_err(|e| e.into())
-                    }),
+                    .and_then(move |mail| mail_service.send_mail(mail).map_err(|e| e.into())),
             ),
             _ => Box::new(future::err(ControllerError::NotFound)),
         }

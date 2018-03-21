@@ -37,7 +37,6 @@ pub mod models;
 use stq_http::client::Client as HttpClient;
 use stq_http::controller::Application;
 
-
 use futures::prelude::*;
 use futures::future;
 use futures_cpupool::CpuPool;

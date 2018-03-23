@@ -1,5 +1,14 @@
 FROM debian:stable-slim
 
+RUN apt-get update
+RUN apt-get install libssl1.1
+
+# Cleaning up
+RUN apt-get purge -y wget
+RUN apt-get autoremove -y
+RUN apt-get clean -y
+RUN rm -rf /var/lib/apt/lists/
+
 RUN mkdir -p /app/config
 WORKDIR /app
 

@@ -1,0 +1,8 @@
+[smtp]
+smtp_sock_addr = "smtp.gmail.com:25"
+smtp_domain = "smtp.gmail.com"
+require_tls = false
+hello_name = "local"
+timeout_secs = 5
+username = ""
+password = ""

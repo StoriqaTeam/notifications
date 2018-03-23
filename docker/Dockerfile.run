@@ -7,4 +7,4 @@ COPY notifications /app
 COPY config /app/config
 EXPOSE 8005
 
-ENTRYPOINT ["notifications"]
+ENTRYPOINT ["/app/notifications"]

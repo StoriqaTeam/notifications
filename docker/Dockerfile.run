@@ -3,7 +3,7 @@ FROM debian:stable-slim
 RUN mkdir -p /app/config
 WORKDIR /app
 
-COPY notificatoins /app
+COPY notifications /app
 COPY config /app/config
 EXPOSE 8005
 

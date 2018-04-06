@@ -1,7 +1,7 @@
 FROM debian:stable-slim
 
 RUN apt-get update
-RUN apt-get install libssl1.1
+RUN apt-get install -y libssl1.1 ca-certificates
 
 # Cleaning up
 RUN apt-get purge -y wget
@@ -10,6 +10,11 @@ RUN apt-get clean -y
 RUN rm -rf /var/lib/apt/lists/
 
 RUN mkdir -p /app/config
+
+# Running as user "app"
+RUN adduser --disabled-password --gecos "" --home /app --no-create-home -u 5000 app
+RUN chown -R app: /app
+USER app
 WORKDIR /app
 
 COPY notifications /app

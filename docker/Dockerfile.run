@@ -1,24 +1,21 @@
 FROM debian:stable-slim
 
-RUN apt-get update
-RUN apt-get install -y libssl1.1 ca-certificates
-
-# Cleaning up
-RUN apt-get purge -y wget
-RUN apt-get autoremove -y
-RUN apt-get clean -y
-RUN rm -rf /var/lib/apt/lists/
+RUN apt-get update \
+  && apt-get install -y ca-certificates \
+  && apt-get autoremove -y \
+  && apt-get clean -y \
+  && rm -rf /var/lib/apt/lists/
 
 RUN mkdir -p /app/config
+COPY target/release/notifications /app
+COPY config /app/config
 
 # Running as user "app"
-RUN adduser --disabled-password --gecos "" --home /app --no-create-home -u 5000 app
-RUN chown -R app: /app
+RUN adduser --disabled-password --gecos "" --home /app --no-create-home -u 5000 app \
+  && chown -R app: /app
+
 USER app
 WORKDIR /app
-
-COPY notifications /app
-COPY config /app/config
 EXPOSE 8005
 
 ENTRYPOINT ["/app/notifications"]

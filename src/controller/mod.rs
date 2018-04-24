@@ -7,7 +7,7 @@ use hyper::{Get, Post};
 use hyper::server::Request;
 use std::sync::Arc;
 
-use stq_http::client::ClientHandle as HttpClientHandle;
+use stq_http::client::ClientHandle;
 use stq_http::controller::Controller;
 use stq_http::errors::ControllerError;
 use stq_http::request_util::{parse_body, ControllerFuture};
@@ -19,18 +19,18 @@ use config;
 use models;
 use self::routes::Route;
 use services::system::{SystemService, SystemServiceImpl};
-use services::mail::{MailService, MailServiceImpl};
+use services::mail::{MailService, SendGridServiceImpl};
 
 pub struct ControllerImpl {
     pub config: config::Config,
     pub cpu_pool: CpuPool,
     pub route_parser: Arc<RouteParser<Route>>,
-    pub http_client: Arc<HttpClientHandle>,
+    pub http_client: ClientHandle,
 }
 
 impl ControllerImpl {
     /// Create a new controller based on services
-    pub fn new(config: config::Config, cpu_pool: CpuPool, http_client: Arc<HttpClientHandle>) -> Self {
+    pub fn new(config: config::Config, cpu_pool: CpuPool, http_client: ClientHandle) -> Self {
         let route_parser = Arc::new(routes::create_route_parser());
         Self {
             config,
@@ -45,7 +45,11 @@ impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
         let system_service = SystemServiceImpl::new();
 
-        let mail_service = MailServiceImpl::new(self.cpu_pool.clone(), self.config.smtp.clone());
+        let mail_service = SendGridServiceImpl::new(
+            self.cpu_pool.clone(),
+            self.http_client.clone(),
+            self.config.sendgrid.clone(),
+        );
 
         match (req.method(), self.route_parser.test(req.path())) {
             // GET /healthcheck

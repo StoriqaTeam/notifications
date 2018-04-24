@@ -48,7 +48,8 @@ impl Controller for ControllerImpl {
         let mail_service = SendGridServiceImpl::new(
             self.cpu_pool.clone(),
             self.http_client.clone(),
-            self.config.sendgrid.clone());
+            self.config.sendgrid.clone(),
+        );
 
         match (req.method(), self.route_parser.test(req.path())) {
             // GET /healthcheck

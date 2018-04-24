@@ -56,8 +56,6 @@ pub fn start_server(config: config::Config) {
     let mut core = Core::new().expect("Unexpected error creating event loop core");
     let handle = Arc::new(core.handle());
 
-
-
     let address = config
         .server
         .address
@@ -77,14 +75,11 @@ pub fn start_server(config: config::Config) {
         .serve_addr_handle(&address, &*handle, {
             move || {
                 // Prepare application
-                let app = Application::new(
-                    controller::ControllerImpl::new(
-                        config.clone(),
-                        cpu_pool.clone(),
-                        client_handle.clone(),
-                    ),
-
-                );
+                let app = Application::new(controller::ControllerImpl::new(
+                    config.clone(),
+                    cpu_pool.clone(),
+                    client_handle.clone(),
+                ));
 
                 Ok(app)
             }

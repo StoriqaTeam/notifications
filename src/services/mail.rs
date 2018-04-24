@@ -26,11 +26,7 @@ pub struct SendGridServiceImpl {
 }
 
 impl SendGridServiceImpl {
-    pub fn new(
-        cpu_pool: CpuPool,
-        http_client: ClientHandle,
-        send_grid_conf: SendGridConf,
-    ) -> Self {
+    pub fn new(cpu_pool: CpuPool, http_client: ClientHandle, send_grid_conf: SendGridConf) -> Self {
         Self {
             cpu_pool,
             http_client,
@@ -40,7 +36,6 @@ impl SendGridServiceImpl {
 }
 
 impl MailService for SendGridServiceImpl {
-
     fn send_mail(&self, mail: SimpleMail) -> ServiceFuture<String> {
         let http_clone = self.http_client.clone();
         let config = self.send_grid_conf.clone();
@@ -53,37 +48,28 @@ impl MailService for SendGridServiceImpl {
             );
 
             let payload = from_simple_mail(mail, config.from_email.clone());
-            serde_json::to_string(
-                &payload
-            ).into_future()
-            .map_err(|e| {
-                error!("Couldn't parse payload");
-                ServiceError::from(e)
-            })
-            .and_then(move |body| {
-                info!("Sending payload: {}", &body);
+            serde_json::to_string(&payload)
+                .into_future()
+                .map_err(|e| {
+                    error!("Couldn't parse payload");
+                    ServiceError::from(e)
+                })
+                .and_then(move |body| {
+                    info!("Sending payload: {}", &body);
 
-                let mut headers = Headers::new();
-                let api_key = config.api_key.clone();
-                headers.set(
-                    Authorization(
-                        Bearer {
-                            token: api_key
-                        }
-                    )
-                );
-                headers.set(
-                    ContentType(mime::APPLICATION_JSON)
-                );
+                    let mut headers = Headers::new();
+                    let api_key = config.api_key.clone();
+                    headers.set(Authorization(Bearer { token: api_key }));
+                    headers.set(ContentType(mime::APPLICATION_JSON));
 
-                http_clone
-                    .request::<serde_json::Value>(Method::Post, url, Some(body), Some(headers))
-                    .map_err(|e| {
-                        error!("Couldn't complete http request");
-                        ServiceError::from(e)
-                    })
-                    .map(|_| "Ok".to_string())
-            })
+                    http_clone
+                        .request::<serde_json::Value>(Method::Post, url, Some(body), Some(headers))
+                        .map_err(|e| {
+                            error!("Couldn't complete http request");
+                            ServiceError::from(e)
+                        })
+                        .map(|_| "Ok".to_string())
+                })
         }))
     }
 }

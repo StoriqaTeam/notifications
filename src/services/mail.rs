@@ -1,103 +1,89 @@
-use std::error::Error;
-use std::time::Duration;
-
+use futures::prelude::*;
 use futures_cpupool::CpuPool;
+use hyper::header::{Authorization, Bearer, ContentType};
+use hyper::{mime, Headers, Method};
+use serde_json;
+
+use stq_http::client::ClientHandle;
 
 use models::SimpleMail;
-use config::SmtpConf;
+use config::SendGridConf;
 use super::types::ServiceFuture;
 use super::error::ServiceError;
 
-use lettre::EmailTransport;
-use lettre::smtp::{ClientSecurity, SmtpTransportBuilder};
-use lettre::smtp::authentication::Credentials;
-use lettre::smtp::client::net::{ClientTlsParameters, DEFAULT_TLS_PROTOCOLS};
-use lettre::smtp::extension::ClientId;
-use lettre_email::EmailBuilder;
-
-use native_tls::TlsConnector;
+use models::sendgrid::from_simple_mail;
 
 pub trait MailService {
     /// Send simple mail
     fn send_mail(&self, mail: SimpleMail) -> ServiceFuture<String>;
 }
 
-/// Mail service, responsible for sending emails
-pub struct MailServiceImpl {
+/// SendGrid service implementation
+pub struct SendGridServiceImpl {
     pub cpu_pool: CpuPool,
-    pub smtp_conf: SmtpConf,
+    pub http_client: ClientHandle,
+    pub send_grid_conf: SendGridConf,
 }
 
-impl MailServiceImpl {
-    pub fn new(cpu_pool: CpuPool, smtp_conf: SmtpConf) -> Self {
+impl SendGridServiceImpl {
+    pub fn new(
+        cpu_pool: CpuPool,
+        http_client: ClientHandle,
+        send_grid_conf: SendGridConf,
+    ) -> Self {
         Self {
             cpu_pool,
-            smtp_conf,
+            http_client,
+            send_grid_conf,
         }
     }
 }
 
-impl MailService for MailServiceImpl {
+impl MailService for SendGridServiceImpl {
+
     fn send_mail(&self, mail: SimpleMail) -> ServiceFuture<String> {
-        let config = self.smtp_conf.clone();
+        let http_clone = self.http_client.clone();
+        let config = self.send_grid_conf.clone();
 
         Box::new(self.cpu_pool.spawn_fn(move || {
-            let email = EmailBuilder::new()
-                .to(mail.to.clone())
-                .from(config.username.clone())
-                .subject(mail.subject.clone())
-                .text(mail.text.clone())
-                .build()
-                .map_err(|e| ServiceError::Unknown(format!("Error constructing mail: {}", e.description())))?;
+            let url = format!(
+                "{}/{}",
+                config.api_addr.clone(),
+                config.send_mail_path.clone()
+            );
 
-            let mut tls_builder = TlsConnector::builder().map_err(|e| {
-                ServiceError::Unknown(format!(
-                    "Failed to create TLS connector: {}",
-                    e.description()
-                ))
-            })?;
-            tls_builder
-                .supported_protocols(DEFAULT_TLS_PROTOCOLS)
-                .map_err(|e| {
-                    ServiceError::Unknown(format!(
-                        "Failed to set supported protocols: {}",
-                        e.description()
-                    ))
-                })?;
+            let payload = from_simple_mail(mail, config.from_email.clone());
+            serde_json::to_string(
+                &payload
+            ).into_future()
+            .map_err(|e| {
+                error!("Couldn't parse payload");
+                ServiceError::from(e)
+            })
+            .and_then(move |body| {
+                info!("Sending payload: {}", &body);
 
-            let connector = tls_builder
-                .build()
-                .map_err(|e| ServiceError::Unknown(format!("Failed to build connector: {}", e.description())))?;
+                let mut headers = Headers::new();
+                let api_key = config.api_key.clone();
+                headers.set(
+                    Authorization(
+                        Bearer {
+                            token: api_key
+                        }
+                    )
+                );
+                headers.set(
+                    ContentType(mime::APPLICATION_JSON)
+                );
 
-            let tls_parameters = ClientTlsParameters::new(config.smtp_domain.clone(), connector);
-
-            let client_security = if config.require_tls {
-                ClientSecurity::Required(tls_parameters)
-            } else {
-                ClientSecurity::Opportunistic(tls_parameters)
-            };
-
-            let mailer = SmtpTransportBuilder::new(config.smtp_sock_addr.clone(), client_security).map_err(|e| {
-                ServiceError::Unknown(format!(
-                    "Unable to setup SMTP transport: {}",
-                    e.description()
-                ))
-            })?;
-
-            let mut mailer = mailer
-                .hello_name(ClientId::Domain(config.hello_name.clone()))
-                .smtp_utf8(true)
-                .timeout(Some(Duration::from_secs(config.timeout_secs.clone())))
-                .credentials(Credentials::new(
-                    config.username.clone(),
-                    config.password.clone(),
-                ))
-                .build();
-
-            mailer
-                .send(&email)
-                .map(|_resp| "Ok".to_string())
-                .map_err(|e| ServiceError::Unknown(format!("Error sending mail: {}", e.description())))
+                http_clone
+                    .request::<serde_json::Value>(Method::Post, url, Some(body), Some(headers))
+                    .map_err(|e| {
+                        error!("Couldn't complete http request");
+                        ServiceError::from(e)
+                    })
+                    .map(|_| "Ok".to_string())
+            })
         }))
     }
 }

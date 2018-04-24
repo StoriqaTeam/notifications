@@ -10,6 +10,7 @@ extern crate futures_cpupool;
 extern crate hyper;
 extern crate hyper_tls;
 extern crate jsonwebtoken;
+#[macro_use]
 extern crate log;
 extern crate rand;
 extern crate regex;
@@ -34,7 +35,6 @@ pub mod controller;
 pub mod services;
 pub mod models;
 
-use stq_http::client::Client as HttpClient;
 use stq_http::controller::Application;
 
 use futures::prelude::*;
@@ -56,20 +56,20 @@ pub fn start_server(config: config::Config) {
     let mut core = Core::new().expect("Unexpected error creating event loop core");
     let handle = Arc::new(core.handle());
 
+
+
     let address = config
         .server
         .address
         .parse()
         .expect("Address must be set in configuration");
 
-    let client = HttpClient::new(
-        &stq_http::client::Config {
-            http_client_retries: config.client.http_client_retries,
-            http_client_buffer_size: config.client.http_client_buffer_size,
-        },
-        &(*handle).clone(),
-    );
-    let client_handle = Arc::new(client.handle());
+    let http_config = stq_http::client::Config {
+        http_client_retries: config.client.http_client_retries,
+        http_client_buffer_size: config.client.http_client_buffer_size,
+    };
+    let client = stq_http::client::Client::new(&http_config, &handle);
+    let client_handle = client.handle();
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
@@ -77,13 +77,14 @@ pub fn start_server(config: config::Config) {
         .serve_addr_handle(&address, &*handle, {
             move || {
                 // Prepare application
-                let app = Application {
-                    controller: Box::new(controller::ControllerImpl::new(
+                let app = Application::new(
+                    controller::ControllerImpl::new(
                         config.clone(),
                         cpu_pool.clone(),
                         client_handle.clone(),
-                    )),
-                };
+                    ),
+
+                );
 
                 Ok(app)
             }

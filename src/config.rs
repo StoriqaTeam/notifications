@@ -8,7 +8,7 @@ use config_crate::{Config as RawConfig, ConfigError, Environment, File};
 pub struct Config {
     pub server: Server,
     pub client: Client,
-    pub smtp: SmtpConf,
+    pub sendgrid: SendGridConf,
 }
 
 /// Common server settings
@@ -28,14 +28,11 @@ pub struct Client {
 
 /// Smtp client settings
 #[derive(Debug, Deserialize, Clone)]
-pub struct SmtpConf {
-    pub smtp_sock_addr: String,
-    pub smtp_domain: String,
-    pub require_tls: bool,
-    pub hello_name: String,
-    pub timeout_secs: u64,
-    pub username: String,
-    pub password: String,
+pub struct SendGridConf {
+    pub api_addr: String,
+    pub api_key: String,
+    pub send_mail_path: String,
+    pub from_email: String,
 }
 
 /// Creates new app config struct

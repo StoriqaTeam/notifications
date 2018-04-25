@@ -1,8 +1,5 @@
-[smtp]
-smtp_sock_addr = "smtp.gmail.com:25"
-smtp_domain = "smtp.gmail.com"
-require_tls = false
-hello_name = "local"
-timeout_secs = 5
-username = ""
-password = ""
+[sendgrid]
+api_addr = "https://api.sendgrid.com/v3"
+api_key = "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"
+send_mail_path = "/mail/send"
+from_email = "a.astahov@storiqa.com"

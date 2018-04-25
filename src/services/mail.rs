@@ -5,6 +5,7 @@ use hyper::{mime, Headers, Method};
 use serde_json;
 
 use stq_http::client::ClientHandle;
+use stq_http::client::Error as HttpError;
 
 use models::SimpleMail;
 use config::SendGridConf;
@@ -63,10 +64,13 @@ impl MailService for SendGridServiceImpl {
                     headers.set(ContentType(mime::APPLICATION_JSON));
 
                     http_clone
-                        .request::<serde_json::Value>(Method::Post, url, Some(body), Some(headers))
-                        .map_err(|e| {
-                            error!("Couldn't complete http request");
-                            ServiceError::from(e)
+                        .request::<String>(Method::Post, url, Some(body), Some(headers))
+                        .or_else(|e| {
+                            // Required due to problem of parsing empty body
+                            match e {
+                                HttpError::Parse(_) => Ok("Ok".to_string()),
+                                _ => Err(ServiceError::from(e))
+                            }
                         })
                         .map(|_| "Ok".to_string())
                 })

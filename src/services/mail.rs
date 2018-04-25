@@ -69,7 +69,7 @@ impl MailService for SendGridServiceImpl {
                             // Required due to problem of parsing empty body
                             match e {
                                 HttpError::Parse(_) => Ok("Ok".to_string()),
-                                _ => Err(ServiceError::from(e))
+                                _ => Err(ServiceError::from(e)),
                             }
                         })
                         .map(|_| "Ok".to_string())

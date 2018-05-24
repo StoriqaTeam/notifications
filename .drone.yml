@@ -26,7 +26,7 @@ pipeline:
       event: pull_request
       branch: [ master, release* ]
   test:
-    image: rust:1.25-stretch
+    image: rust:1.26-stretch
     environment:
     - RUN_MODE=k8s
     commands:
@@ -43,7 +43,7 @@ pipeline:
 ###
 
   build:
-    image: rust:1.25-stretch
+    image: rust:1.26-stretch
     commands:
     - cargo build --release --locked
     when:

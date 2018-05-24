@@ -32,17 +32,17 @@ extern crate native_tls;
 
 pub mod config;
 pub mod controller;
-pub mod services;
 pub mod models;
+pub mod services;
 
 use stq_http::controller::Application;
 
-use futures::prelude::*;
 use futures::future;
+use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
-use std::sync::Arc;
 use std::process;
+use std::sync::Arc;
 use tokio_core::reactor::Core;
 
 /// Starts new web service from provided `Config`
@@ -56,11 +56,7 @@ pub fn start_server(config: config::Config) {
     let mut core = Core::new().expect("Unexpected error creating event loop core");
     let handle = Arc::new(core.handle());
 
-    let address = config
-        .server
-        .address
-        .parse()
-        .expect("Address must be set in configuration");
+    let address = config.server.address.parse().expect("Address must be set in configuration");
 
     let http_config = stq_http::client::Config {
         http_client_retries: config.client.http_client_retries,
@@ -94,10 +90,7 @@ pub fn start_server(config: config::Config) {
             .for_each({
                 let handle = handle.clone();
                 move |conn| {
-                    handle.spawn(
-                        conn.map(|_| ())
-                            .map_err(|why| eprintln!("Server Error: {:?}", why)),
-                    );
+                    handle.spawn(conn.map(|_| ()).map_err(|why| eprintln!("Server Error: {:?}", why)));
                     Ok(())
                 }
             })

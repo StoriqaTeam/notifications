@@ -7,10 +7,10 @@ use serde_json;
 use stq_http::client::ClientHandle;
 use stq_http::client::Error as HttpError;
 
-use models::SimpleMail;
-use config::SendGridConf;
-use super::types::ServiceFuture;
 use super::error::ServiceError;
+use super::types::ServiceFuture;
+use config::SendGridConf;
+use models::SimpleMail;
 
 use models::sendgrid::from_simple_mail;
 
@@ -42,11 +42,7 @@ impl MailService for SendGridServiceImpl {
         let config = self.send_grid_conf.clone();
 
         Box::new(self.cpu_pool.spawn_fn(move || {
-            let url = format!(
-                "{}/{}",
-                config.api_addr.clone(),
-                config.send_mail_path.clone()
-            );
+            let url = format!("{}/{}", config.api_addr.clone(), config.send_mail_path.clone());
 
             let payload = from_simple_mail(mail, config.from_email.clone());
             serde_json::to_string(&payload)

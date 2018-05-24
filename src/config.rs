@@ -38,7 +38,7 @@ pub struct SendGridConf {
 /// Creates new app config struct
 /// #Examples
 /// ```
-/// use users_lib::config::*;
+/// use notifications_lib::config::*;
 ///
 /// let config = Config::new();
 /// ```

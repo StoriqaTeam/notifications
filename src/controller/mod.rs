@@ -49,7 +49,10 @@ impl Controller for ControllerImpl {
 
         match (req.method(), self.route_parser.test(req.path())) {
             // GET /healthcheck
-            (&Get, Some(Route::Healthcheck)) => serialize_future(system_service.healthcheck()),
+            (&Get, Some(Route::Healthcheck)) => {
+                trace!("Received healthcheck request");
+                serialize_future(system_service.healthcheck())
+            }
 
             // POST /sendmail
             (&Post, Some(Route::SendMail)) => serialize_future(

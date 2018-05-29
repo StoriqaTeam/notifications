@@ -1,25 +1,25 @@
 pub mod routes;
 
-use futures::prelude::*;
 use futures::future;
+use futures::prelude::*;
 use futures_cpupool::CpuPool;
-use hyper::{Get, Post};
 use hyper::server::Request;
+use hyper::{Get, Post};
 use std::sync::Arc;
 
 use stq_http::client::ClientHandle;
 use stq_http::controller::Controller;
 use stq_http::errors::ControllerError;
-use stq_http::request_util::{parse_body, ControllerFuture};
 use stq_http::request_util::serialize_future;
+use stq_http::request_util::{parse_body, ControllerFuture};
 use stq_router::RouteParser;
 
 use config;
 
-use models;
 use self::routes::Route;
-use services::system::{SystemService, SystemServiceImpl};
+use models;
 use services::mail::{MailService, SendGridServiceImpl};
+use services::system::{SystemService, SystemServiceImpl};
 
 pub struct ControllerImpl {
     pub config: config::Config,
@@ -45,15 +45,14 @@ impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
         let system_service = SystemServiceImpl::new();
 
-        let mail_service = SendGridServiceImpl::new(
-            self.cpu_pool.clone(),
-            self.http_client.clone(),
-            self.config.sendgrid.clone(),
-        );
+        let mail_service = SendGridServiceImpl::new(self.cpu_pool.clone(), self.http_client.clone(), self.config.sendgrid.clone());
 
         match (req.method(), self.route_parser.test(req.path())) {
             // GET /healthcheck
-            (&Get, Some(Route::Healthcheck)) => serialize_future(system_service.healthcheck()),
+            (&Get, Some(Route::Healthcheck)) => {
+                trace!("Received healthcheck request");
+                serialize_future(system_service.healthcheck())
+            }
 
             // POST /sendmail
             (&Post, Some(Route::SendMail)) => serialize_future(

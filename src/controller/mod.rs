@@ -1,26 +1,27 @@
-pub mod routes;
+use std::sync::Arc;
 
+use failure::Fail;
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Request;
 use hyper::{Get, Post};
-use std::sync::Arc;
 
 use stq_http::client::ClientHandle;
 use stq_http::controller::Controller;
-use stq_http::errors::ControllerError;
+use stq_http::controller::ControllerFuture;
+use stq_http::request_util::parse_body;
 use stq_http::request_util::serialize_future;
-use stq_http::request_util::{parse_body, ControllerFuture};
 use stq_router::RouteParser;
 
-use config;
-
 use self::routes::Route;
+use config;
+use errors::Error;
 use models;
 use services::mail::{MailService, SendGridServiceImpl};
 use services::system::{SystemService, SystemServiceImpl};
 
+pub mod routes;
 pub struct ControllerImpl {
     pub config: config::Config,
     pub cpu_pool: CpuPool,
@@ -47,7 +48,7 @@ impl Controller for ControllerImpl {
 
         let mail_service = SendGridServiceImpl::new(self.cpu_pool.clone(), self.http_client.clone(), self.config.sendgrid.clone());
 
-        match (req.method(), self.route_parser.test(req.path())) {
+        match (&req.method().clone(), self.route_parser.test(req.path())) {
             // GET /healthcheck
             (&Get, Some(Route::Healthcheck)) => {
                 trace!("Received healthcheck request");
@@ -57,10 +58,20 @@ impl Controller for ControllerImpl {
             // POST /sendmail
             (&Post, Some(Route::SendMail)) => serialize_future(
                 parse_body::<models::SimpleMail>(req.body())
-                    .map_err(|e| ControllerError::UnprocessableEntity(e.into()))
-                    .and_then(move |mail| mail_service.send_mail(mail).map_err(|e| e.into())),
+                    .map_err(|e| {
+                        e.context("Parsing body // POST /sendmail in SimpleMail failed!")
+                            .context(Error::Parse)
+                            .into()
+                    })
+                    .and_then(move |mail| mail_service.send_mail(mail)),
             ),
-            _ => Box::new(future::err(ControllerError::NotFound)),
+
+            // Fallback
+            (m, r) => Box::new(future::err(
+                format_err!("Request to non existing endpoint in notifications microservice! {:?} {:?}", m, r)
+                    .context(Error::NotFound)
+                    .into(),
+            )),
         }
     }
 }

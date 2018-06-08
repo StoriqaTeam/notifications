@@ -32,6 +32,7 @@ extern crate native_tls;
 
 pub mod config;
 pub mod controller;
+pub mod errors;
 pub mod models;
 pub mod services;
 
@@ -71,7 +72,7 @@ pub fn start_server(config: config::Config) {
         .serve_addr_handle(&address, &*handle, {
             move || {
                 // Prepare application
-                let app = Application::new(controller::ControllerImpl::new(
+                let app = Application::<errors::Error>::new(controller::ControllerImpl::new(
                     config.clone(),
                     cpu_pool.clone(),
                     client_handle.clone(),

@@ -1,3 +1,5 @@
+use failure::Error as FailureError;
+use failure::Fail;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::header::{Authorization, Bearer, ContentType};
@@ -7,7 +9,6 @@ use serde_json;
 use stq_http::client::ClientHandle;
 use stq_http::client::Error as HttpError;
 
-use super::error::ServiceError;
 use super::types::ServiceFuture;
 use config::SendGridConf;
 use models::SimpleMail;
@@ -41,35 +42,36 @@ impl MailService for SendGridServiceImpl {
         let http_clone = self.http_client.clone();
         let config = self.send_grid_conf.clone();
 
-        Box::new(self.cpu_pool.spawn_fn(move || {
-            let url = format!("{}/{}", config.api_addr.clone(), config.send_mail_path.clone());
+        Box::new(
+            self.cpu_pool
+                .spawn_fn(move || {
+                    let url = format!("{}/{}", config.api_addr.clone(), config.send_mail_path.clone());
 
-            let payload = from_simple_mail(mail, config.from_email.clone());
-            serde_json::to_string(&payload)
-                .into_future()
-                .map_err(|e| {
-                    error!("Couldn't parse payload");
-                    ServiceError::from(e)
-                })
-                .and_then(move |body| {
-                    info!("Sending payload: {}", &body);
+                    let payload = from_simple_mail(mail, config.from_email.clone());
+                    serde_json::to_string(&payload)
+                        .into_future()
+                        .map_err(|e| e.context("Couldn't parse payload").into())
+                        .and_then(move |body| {
+                            info!("Sending payload: {}", &body);
 
-                    let mut headers = Headers::new();
-                    let api_key = config.api_key.clone();
-                    headers.set(Authorization(Bearer { token: api_key }));
-                    headers.set(ContentType(mime::APPLICATION_JSON));
+                            let mut headers = Headers::new();
+                            let api_key = config.api_key.clone();
+                            headers.set(Authorization(Bearer { token: api_key }));
+                            headers.set(ContentType(mime::APPLICATION_JSON));
 
-                    http_clone
-                        .request::<String>(Method::Post, url, Some(body), Some(headers))
-                        .or_else(|e| {
-                            // Required due to problem of parsing empty body
-                            match e {
-                                HttpError::Parse(_) => Ok("Ok".to_string()),
-                                _ => Err(ServiceError::from(e)),
-                            }
+                            http_clone
+                                .request::<String>(Method::Post, url, Some(body), Some(headers))
+                                .or_else(|e| {
+                                    // Required due to problem of parsing empty body
+                                    match e {
+                                        HttpError::Parse(_) => Ok("Ok".to_string()),
+                                        error => Err(error.into()),
+                                    }
+                                })
+                                .map(|_| "Ok".to_string())
                         })
-                        .map(|_| "Ok".to_string())
                 })
-        }))
+                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+        )
     }
 }

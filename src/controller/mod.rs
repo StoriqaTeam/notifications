@@ -48,6 +48,8 @@ impl Controller for ControllerImpl {
 
         let mail_service = SendGridServiceImpl::new(self.cpu_pool.clone(), self.http_client.clone(), self.config.sendgrid.clone());
 
+        let path = req.path().to_string();
+
         match (&req.method().clone(), self.route_parser.test(req.path())) {
             // GET /healthcheck
             (&Get, Some(Route::Healthcheck)) => {
@@ -67,8 +69,8 @@ impl Controller for ControllerImpl {
             ),
 
             // Fallback
-            (m, r) => Box::new(future::err(
-                format_err!("Request to non existing endpoint in notifications microservice! {:?} {:?}", m, r)
+            (m, _) => Box::new(future::err(
+                format_err!("Request to non existing endpoint in notifications microservice! {:?} {:?}", m, path)
                     .context(Error::NotFound)
                     .into(),
             )),

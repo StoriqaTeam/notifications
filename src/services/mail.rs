@@ -11,9 +11,9 @@ use stq_http::client::Error as HttpError;
 
 use super::types::ServiceFuture;
 use config::SendGridConf;
-use models::SimpleMail;
-
+use errors::Error;
 use models::sendgrid::from_simple_mail;
+use models::SimpleMail;
 
 pub trait MailService {
     /// Send simple mail
@@ -65,7 +65,7 @@ impl MailService for SendGridServiceImpl {
                                     // Required due to problem of parsing empty body
                                     match e {
                                         HttpError::Parse(_) => Ok("Ok".to_string()),
-                                        error => Err(error.into()),
+                                        error => Err(error.context(Error::HttpClient).into()),
                                     }
                                 })
                                 .map(|_| "Ok".to_string())

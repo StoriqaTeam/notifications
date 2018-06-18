@@ -30,6 +30,7 @@ pipeline:
     image: rust:1.26-stretch
     environment:
     - RUN_MODE=k8s
+    - CARGO_HOME=deps
     commands:
     - rustup component add rustfmt-preview
     - cargo fmt --all -- --write-mode=diff
@@ -45,6 +46,8 @@ pipeline:
 
   build:
     image: rust:1.26-stretch
+    environment:
+    - CARGO_HOME=deps
     commands:
     - cargo build --release --locked
     when:

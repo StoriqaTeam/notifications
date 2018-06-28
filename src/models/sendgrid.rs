@@ -37,7 +37,7 @@ pub fn from_simple_mail(simple_mail: SimpleMail, from_email: String) -> SendGrid
     personalizations.push(Personalization { to });
 
     let from = Address {
-        email: from_email.clone(),
+        email: from_email,
         name: None,
     };
 
@@ -46,15 +46,13 @@ pub fn from_simple_mail(simple_mail: SimpleMail, from_email: String) -> SendGrid
     let mut content: Vec<Content> = Vec::new();
     content.push(Content {
         type_field: "text/plain".to_string(),
-        value: simple_mail.text.clone(),
+        value: simple_mail.text,
     });
 
-    let payload = SendGridPayload {
+    SendGridPayload {
         personalizations,
         from,
         subject,
         content,
-    };
-
-    payload
+    }
 }

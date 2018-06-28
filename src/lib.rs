@@ -51,7 +51,7 @@ pub fn start_server(config: config::Config) {
     // Prepare logger
     env_logger::init().unwrap();
 
-    let thread_count = config.server.thread_count.clone();
+    let thread_count = config.server.thread_count;
     let cpu_pool = CpuPool::new(thread_count);
     // Prepare reactor
     let mut core = Core::new().expect("Unexpected error creating event loop core");

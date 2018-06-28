@@ -44,7 +44,7 @@ impl ControllerImpl {
 
 impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
-        let system_service = SystemServiceImpl::new();
+        let system_service = SystemServiceImpl::default();
 
         let mail_service = SendGridServiceImpl::new(self.cpu_pool.clone(), self.http_client.clone(), self.config.sendgrid.clone());
 

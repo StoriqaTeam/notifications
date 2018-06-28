@@ -52,7 +52,7 @@ impl MailService for SendGridServiceImpl {
                         .into_future()
                         .map_err(|e| e.context("Couldn't parse payload").into())
                         .and_then(move |body| {
-                            info!("Sending payload: {}", &body);
+                            debug!("Sending payload: {}", &body);
 
                             let mut headers = Headers::new();
                             let api_key = config.api_key.clone();

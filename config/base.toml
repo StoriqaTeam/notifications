@@ -1,5 +1,5 @@
 [server]
-address = "0.0.0.0:8005"
+address = "0.0.0.0:8000"
 thread_count = 20
 
 [client]

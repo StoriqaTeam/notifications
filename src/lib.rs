@@ -117,6 +117,6 @@ pub fn start_server(config: config::Config) {
             .map_err(|_| ()),
     );
 
-    //info!("Listening on http://{}, threads: {}", address, thread_count);
+    info!("Listening on http://{}, threads: {}", address, thread_count);
     core.run(future::empty::<(), ()>()).unwrap();
 }

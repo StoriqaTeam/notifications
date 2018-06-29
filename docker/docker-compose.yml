@@ -11,6 +11,8 @@ services:
     volumes:
       - ..:/app
       - notifications_cargo_cache:/usr/local/cargo
+    environment:
+      - "RUST_LOG=notifications=debug"
     expose:
       - 8005
     stdin_open: true

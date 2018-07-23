@@ -5,7 +5,7 @@ use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Request;
-use hyper::{Get, Post};
+use hyper::Post;
 
 use stq_http::client::ClientHandle;
 use stq_http::controller::Controller;
@@ -19,7 +19,6 @@ use config;
 use errors::Error;
 use models;
 use services::mail::{MailService, SendGridServiceImpl};
-use services::system::{SystemService, SystemServiceImpl};
 
 pub mod routes;
 pub struct ControllerImpl {
@@ -44,19 +43,11 @@ impl ControllerImpl {
 
 impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
-        let system_service = SystemServiceImpl::default();
-
         let mail_service = SendGridServiceImpl::new(self.cpu_pool.clone(), self.http_client.clone(), self.config.sendgrid.clone());
 
         let path = req.path().to_string();
 
         match (&req.method().clone(), self.route_parser.test(req.path())) {
-            // GET /healthcheck
-            (&Get, Some(Route::Healthcheck)) => {
-                trace!("Received healthcheck request");
-                serialize_future(system_service.healthcheck())
-            }
-
             // POST /sendmail
             (&Post, Some(Route::SendMail)) => serialize_future(
                 parse_body::<models::SimpleMail>(req.body())

@@ -20,6 +20,7 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate sha3;
 extern crate stq_http;
+extern crate stq_logging;
 extern crate stq_router;
 extern crate tokio_core;
 extern crate uuid;
@@ -36,40 +37,19 @@ pub mod errors;
 pub mod models;
 pub mod services;
 
-use std::env;
 use std::process;
 use std::sync::Arc;
-use std::io::Write;
 
-use chrono::prelude::*;
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
 use tokio_core::reactor::Core;
-use env_logger::Builder as LogBuilder;
-use log::LevelFilter as LogLevelFilter;
 
 use stq_http::controller::Application;
 
-
 /// Starts new web service from provided `Config`
 pub fn start_server(config: config::Config) {
-    let mut builder = LogBuilder::new();
-    builder
-        .format(|formatter, record| {
-            let now = Utc::now();
-            writeln!(formatter, "{} - {:5} - {}", now.to_rfc3339(), record.level(), record.args())
-        })
-        .filter(None, LogLevelFilter::Info);
-
-    if env::var("RUST_LOG").is_ok() {
-        builder.parse(&env::var("RUST_LOG").unwrap());
-    }
-
-    // Prepare logger
-    builder.init();
-
     let thread_count = config.server.thread_count;
     let cpu_pool = CpuPool::new(thread_count);
     // Prepare reactor

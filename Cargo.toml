@@ -8,8 +8,8 @@ path = "src/lib.rs"
 
 [dependencies]
 config = "0.7"
-log = "0.3.8"
-env_logger = "0.4.3"
+log = "0.4"
+env_logger = "0.5.6"
 hyper = "0.11.9"
 futures = "0.1.17"
 lettre = "0.7"
@@ -32,5 +32,6 @@ failure = "0.1.1"
 lazy_static = "1.0"
 stq_http = { path = "vendor/libstqbackend/http" }
 stq_router = { path = "vendor/libstqbackend/router" }
+stq_logging = { path = "vendor/libstqbackend/logging" }
 uuid = { version = "*", features = ["use_std", "v4", "serde"] }
 native-tls = "0.1"

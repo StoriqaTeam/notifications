@@ -20,6 +20,7 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate sha3;
 extern crate stq_http;
+extern crate stq_logging;
 extern crate stq_router;
 extern crate tokio_core;
 extern crate uuid;
@@ -32,25 +33,24 @@ extern crate native_tls;
 
 pub mod config;
 pub mod controller;
+pub mod errors;
 pub mod models;
 pub mod services;
 
-use stq_http::controller::Application;
+use std::process;
+use std::sync::Arc;
 
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
-use std::process;
-use std::sync::Arc;
 use tokio_core::reactor::Core;
+
+use stq_http::controller::Application;
 
 /// Starts new web service from provided `Config`
 pub fn start_server(config: config::Config) {
-    // Prepare logger
-    env_logger::init().unwrap();
-
-    let thread_count = config.server.thread_count.clone();
+    let thread_count = config.server.thread_count;
     let cpu_pool = CpuPool::new(thread_count);
     // Prepare reactor
     let mut core = Core::new().expect("Unexpected error creating event loop core");
@@ -71,7 +71,7 @@ pub fn start_server(config: config::Config) {
         .serve_addr_handle(&address, &*handle, {
             move || {
                 // Prepare application
-                let app = Application::new(controller::ControllerImpl::new(
+                let app = Application::<errors::Error>::new(controller::ControllerImpl::new(
                     config.clone(),
                     cpu_pool.clone(),
                     client_handle.clone(),
@@ -97,6 +97,6 @@ pub fn start_server(config: config::Config) {
             .map_err(|_| ()),
     );
 
-    //info!("Listening on http://{}, threads: {}", address, thread_count);
+    info!("Listening on http://{}, threads: {}", address, thread_count);
     core.run(future::empty::<(), ()>()).unwrap();
 }

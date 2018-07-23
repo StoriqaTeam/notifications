@@ -1,7 +1,9 @@
 //! Config module contains the top-level config for the app.
+use std::env;
+
+use stq_logging::GrayLogConfig;
 
 use config_crate::{Config as RawConfig, ConfigError, Environment, File};
-use std::env;
 
 /// Basic settings - HTTP binding address and database DSN
 #[derive(Debug, Deserialize, Clone)]
@@ -9,6 +11,7 @@ pub struct Config {
     pub server: Server,
     pub client: Client,
     pub sendgrid: SendGridConf,
+    pub graylog: Option<GrayLogConfig>,
 }
 
 /// Common server settings
@@ -48,7 +51,7 @@ impl Config {
         s.merge(File::with_name("config/base"))?;
 
         // Note that this file is _optional_
-        let env = env::var("RUN_MODE").unwrap_or("development".into());
+        let env = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
         s.merge(File::with_name(&format!("config/{}", env)).required(false))?;
 
         // Add in settings from the environment (with a prefix of STQ_USERS)

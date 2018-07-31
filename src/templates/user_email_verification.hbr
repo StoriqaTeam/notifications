@@ -1,0 +1,21 @@
+<html>
+  <head>
+    <title>Verify your account on Storiqa</title>
+  </head>
+  <body>
+    <p>
+      Dear {{user.first_name}},
+  
+      Thank you for signing up for Storiqa! In order to finish the registration process and verify your account, please confirm your e-mail by following the link below:
+      
+     <a href="{{verify_email_path}}/{{token}}">Verify my email on Storiqa.</a>
+
+      Best regards,
+      Storiqa Team
+      
+      Note: If you didn't initiate the request, please delete this e-mail. 
+      This is an automatically generated e-mail – please do not reply to it.
+    </p>
+
+  </body>
+</html>

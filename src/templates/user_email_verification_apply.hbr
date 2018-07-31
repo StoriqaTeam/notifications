@@ -1,0 +1,19 @@
+<html>
+  <head>
+    <title>Successful registration on Storiqa</title>
+  </head>
+  <body>
+    <p>
+      Dear {{user.first_name}},
+ 
+      Your e-mail address is successfully confirmed and registration process is completely finished. Thank you for joining us!
+      
+      Best regards,
+      Storiqa Team  
+      
+      This is an automatically generated e-mail – please do not reply to it.
+
+    </p>
+
+  </body>
+</html>

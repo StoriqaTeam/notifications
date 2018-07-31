@@ -1,7 +1,6 @@
 extern crate base64;
 extern crate chrono;
 extern crate config as config_crate;
-
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -17,19 +16,20 @@ extern crate regex;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate handlebars;
+extern crate lettre;
+extern crate lettre_email;
+extern crate mime;
+extern crate native_tls;
 extern crate serde_json;
 extern crate sha3;
-extern crate stq_http;
-extern crate stq_logging;
-extern crate stq_router;
 extern crate tokio_core;
 extern crate uuid;
 
-extern crate lettre;
-extern crate lettre_email;
-//extern crate mime;
-
-extern crate native_tls;
+extern crate stq_http;
+extern crate stq_logging;
+extern crate stq_router;
+extern crate stq_static_resources;
 
 pub mod config;
 pub mod controller;

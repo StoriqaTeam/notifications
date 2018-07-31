@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <title>The order {{order_slug}} status</title>
+  </head>
+  <body>
+    <p>
+      Dear {{user.first_name}},
+      Please be informed that the order {{order_slug}} status has changed to {{order_state}}.
+      You can watch your order on <a href="{{cluster_url}}/profile/orders/{{order_slug}}">this page</a>.
+      Best regards,
+      Storiqa Team
+      
+      This is an automatically generated email – please do not reply to it.
+
+    </p>
+
+  </body>
+</html>

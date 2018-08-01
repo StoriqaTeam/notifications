@@ -6,6 +6,8 @@ pub enum Route {
     SimpleMail,
     OrderUpdateStateForUser,
     OrderUpdateStateForStore,
+    OrderCreateForUser,
+    OrderCreateForStore,
     EmailVerificationForUser,
     PasswordResetForUser,
     ApplyPasswordResetForUser,
@@ -21,6 +23,10 @@ pub fn create_route_parser() -> RouteParser<Route> {
     router.add_route(r"^/users/order-update-state$", || Route::OrderUpdateStateForUser);
     // OrderUpdateStateForStore
     router.add_route(r"^/stores/order-update-state$", || Route::OrderUpdateStateForStore);
+    // OrderCreateForUser
+    router.add_route(r"^/users/order-create$", || Route::OrderCreateForUser);
+    // OrderCreateForStore
+    router.add_route(r"^/stores/order-create$", || Route::OrderCreateForStore);
     // EmailVerificationForUser
     router.add_route(r"^/users/email-verification$", || Route::EmailVerificationForUser);
     // ApplyEmailVerificationForUser

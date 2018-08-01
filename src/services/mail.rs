@@ -24,6 +24,10 @@ pub trait MailService {
     fn order_update_user(self, mail: OrderUpdateStateForUser) -> ServiceFuture<()>;
     /// Send Order Update State For Store
     fn order_update_store(self, mail: OrderUpdateStateForStore) -> ServiceFuture<()>;
+    /// Send Order Create State For Store
+    fn order_create_user(self, mail: OrderCreateForUser) -> ServiceFuture<()>;
+    /// Send Order Create State For Store
+    fn order_create_store(self, mail: OrderCreateForStore) -> ServiceFuture<()>;
     /// Send Email Verification For User
     fn email_verification(self, mail: EmailVerificationForUser) -> ServiceFuture<()>;
     /// Send Apply Email Verification For User
@@ -120,7 +124,7 @@ impl MailService for SendGridServiceImpl {
     /// Send Order Update State For Store
     fn order_update_user(self, mail: OrderUpdateStateForUser) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/user_update_order.hbr");
+        let template = include_str!("../templates/user_order_update.hbr");
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template(template, mail))
@@ -130,7 +134,27 @@ impl MailService for SendGridServiceImpl {
     /// Send Order Update State For Store
     fn order_update_store(self, mail: OrderUpdateStateForStore) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/store_update_order.hbr");
+        let template = include_str!("../templates/store_order_update.hbr");
+        Box::new(
+            cpu_pool
+                .spawn_fn(move || self.send_email_with_template(template, mail))
+                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+        )
+    }
+    /// Send Order Create State For Store
+    fn order_create_user(self, mail: OrderCreateForUser) -> ServiceFuture<()> {
+        let cpu_pool = self.cpu_pool.clone();
+        let template = include_str!("../templates/user_order_create.hbr");
+        Box::new(
+            cpu_pool
+                .spawn_fn(move || self.send_email_with_template(template, mail))
+                .map_err(|e: FailureError| e.context("Mail service, order_update_user endpoint error occured.").into()),
+        )
+    }
+    /// Send Order Create State For Store
+    fn order_create_store(self, mail: OrderCreateForStore) -> ServiceFuture<()> {
+        let cpu_pool = self.cpu_pool.clone();
+        let template = include_str!("../templates/store_order_create.hbr");
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template(template, mail))

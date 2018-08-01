@@ -1,4 +1,5 @@
-use super::mail::SimpleMail;
+use mime::Mime;
+use stq_static_resources::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SendGridPayload {
@@ -26,33 +27,35 @@ pub struct Content {
     pub value: String,
 }
 
-pub fn from_simple_mail(simple_mail: SimpleMail, from_email: String) -> SendGridPayload {
-    let mut to: Vec<Address> = Vec::new();
-    to.push(Address {
-        email: simple_mail.to.clone(),
-        name: None,
-    });
+impl SendGridPayload {
+    pub fn from_send_mail(send_mail: SimpleMail, from_email: String, type_field: Mime) -> Self {
+        let mut to: Vec<Address> = Vec::new();
+        to.push(Address {
+            email: send_mail.to.clone(),
+            name: None,
+        });
 
-    let mut personalizations: Vec<Personalization> = Vec::new();
-    personalizations.push(Personalization { to });
+        let mut personalizations: Vec<Personalization> = Vec::new();
+        personalizations.push(Personalization { to });
 
-    let from = Address {
-        email: from_email,
-        name: None,
-    };
+        let from = Address {
+            email: from_email,
+            name: None,
+        };
 
-    let subject = simple_mail.subject.clone();
+        let subject = send_mail.subject.clone();
 
-    let mut content: Vec<Content> = Vec::new();
-    content.push(Content {
-        type_field: "text/plain".to_string(),
-        value: simple_mail.text,
-    });
+        let mut content: Vec<Content> = Vec::new();
+        content.push(Content {
+            type_field: type_field.to_string(),
+            value: send_mail.text,
+        });
 
-    SendGridPayload {
-        personalizations,
-        from,
-        subject,
-        content,
+        Self {
+            personalizations,
+            from,
+            subject,
+            content,
+        }
     }
 }

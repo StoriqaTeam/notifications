@@ -88,6 +88,26 @@ impl Controller for ControllerImpl {
                     })
                     .and_then(move |mail| mail_service.email_verification(mail)),
             ),
+            // POST /stores/order-create
+            (&Post, Some(Route::OrderCreateForStore)) => serialize_future(
+                parse_body::<OrderCreateForStore>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body // POST /stores/order-create in OrderCreateForStore failed!")
+                            .context(Error::Parse)
+                            .into()
+                    })
+                    .and_then(move |mail| mail_service.order_create_store(mail)),
+            ),
+            // POST /users/order-create
+            (&Post, Some(Route::OrderCreateForUser)) => serialize_future(
+                parse_body::<OrderCreateForUser>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body // POST /users/order-create in OrderCreateForUser failed!")
+                            .context(Error::Parse)
+                            .into()
+                    })
+                    .and_then(move |mail| mail_service.order_create_user(mail)),
+            ),
             // POST /users/apply-email-verification
             (&Post, Some(Route::ApplyEmailVerificationForUser)) => serialize_future(
                 parse_body::<ApplyEmailVerificationForUser>(req.body())

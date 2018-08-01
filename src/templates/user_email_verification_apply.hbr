@@ -5,13 +5,13 @@
   <body>
     <p>
       Dear {{user.first_name}},
- 
+      <br/>
       Your e-mail address is successfully confirmed and registration process is completely finished. Thank you for joining us!
-      
+      <br/>
       Best regards,
       Storiqa Team  
-      
-      This is an automatically generated e-mail – please do not reply to it.
+      <br/>
+      <i>This is an automatically generated e-mail – please do not reply to it.</i>
 
     </p>
 

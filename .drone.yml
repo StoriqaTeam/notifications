@@ -11,6 +11,7 @@ pipeline:
       - pull_request
       - push
       - tag
+
 ###
 # Test PR
 ###
@@ -51,6 +52,7 @@ pipeline:
     - OUT_DIR=/drone/out
     commands:
     - cargo build --release --locked
+    - test -d /drone/out || mkdir /drone/out
     when:
       event: push
       branch:

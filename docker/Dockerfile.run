@@ -9,7 +9,7 @@ RUN apt-get update \
 RUN mkdir -p /app/config
 COPY target/release/notifications /app
 COPY config /app/config
-COPY out /app/out
+#COPY out /app/out
 
 # Running as user "app"
 RUN adduser --disabled-password --gecos "" --home /app --no-create-home -u 5000 app \

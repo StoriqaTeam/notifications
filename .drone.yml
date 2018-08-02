@@ -52,7 +52,7 @@ pipeline:
     - OUT_DIR=/drone/out
     commands:
     - cargo build --release --locked
-    - test -d /drone/out || mkdir /drone/out
+    - mkdir /drone/out || true
     when:
       event: push
       branch:

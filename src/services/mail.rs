@@ -156,7 +156,7 @@ impl MailService for SendGridServiceImpl {
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("store_order_update.hbr", mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Mail service, order_update_store endpoint error occured.").into()),
         )
     }
     /// Send Order Create State For Store
@@ -165,7 +165,7 @@ impl MailService for SendGridServiceImpl {
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("user_order_create.hbr", mail))
-                .map_err(|e: FailureError| e.context("Mail service, order_update_user endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Mail service, order_create_user endpoint error occured.").into()),
         )
     }
     /// Send Order Create State For Store
@@ -174,7 +174,7 @@ impl MailService for SendGridServiceImpl {
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("store_order_create.hbr", mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Mail service, order_create_store endpoint error occured.").into()),
         )
     }
     /// Send Email Verification For User
@@ -183,7 +183,7 @@ impl MailService for SendGridServiceImpl {
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("user_email_verification.hbr", mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Mail service, email_verification endpoint error occured.").into()),
         )
     }
     /// Send Apply Email Verification For User
@@ -192,7 +192,7 @@ impl MailService for SendGridServiceImpl {
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("user_email_verification_apply.hbr", mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Mail service, apply_email_verification endpoint error occured.").into()),
         )
     }
     /// Send Password Reset For User
@@ -201,7 +201,7 @@ impl MailService for SendGridServiceImpl {
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("user_reset_password.hbr", mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Mail service, password_reset endpoint error occured.").into()),
         )
     }
     /// Send Apply Password Reset For User
@@ -210,7 +210,7 @@ impl MailService for SendGridServiceImpl {
         Box::new(
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("user_reset_password_apply.hbr", mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .map_err(|e: FailureError| e.context("Mail service, apply_password_reset endpoint error occured.").into()),
         )
     }
 }

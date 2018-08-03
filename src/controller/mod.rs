@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use failure::Fail;
 use futures::future;
@@ -21,39 +23,42 @@ use errors::Error;
 use services::mail::{MailService, SendGridServiceImpl};
 
 pub mod routes;
+
+#[derive(Clone)]
 pub struct ControllerImpl {
     pub config: config::Config,
     pub cpu_pool: CpuPool,
     pub route_parser: Arc<RouteParser<Route>>,
     pub http_client: ClientHandle,
+    pub templates: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl ControllerImpl {
     /// Create a new controller based on services
-    pub fn new(config: config::Config, cpu_pool: CpuPool, http_client: ClientHandle) -> Self {
+    pub fn new(
+        config: config::Config,
+        cpu_pool: CpuPool,
+        http_client: ClientHandle,
+        templates: Arc<Mutex<HashMap<String, String>>>,
+    ) -> Self {
         let route_parser = Arc::new(routes::create_route_parser());
         Self {
             config,
             cpu_pool,
             route_parser,
             http_client,
+            templates,
         }
     }
 }
 
 impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
-        let template_dir = self.config
-            .templates
-            .clone()
-            .map(|t| t.path)
-            .unwrap_or_else(|| format!("{}/templates", env!("OUT_DIR")));
-
         let mail_service = SendGridServiceImpl::new(
             self.cpu_pool.clone(),
             self.http_client.clone(),
             self.config.sendgrid.clone(),
-            template_dir,
+            self.templates.clone(),
         );
 
         let path = req.path().to_string();

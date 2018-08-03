@@ -87,13 +87,21 @@ pub fn start_server(config: config::Config) {
         let entry = entry.unwrap();
         if !entry.file_type().unwrap().is_dir() {
             let path = entry.path();
-            let p = path.clone();
-            let file_name = p.file_name().unwrap().to_str().unwrap();
-            let mut file = File::open(path).unwrap();
-            let mut template = String::new();
-            file.read_to_string(&mut template).unwrap();
-            let mut t = templates.lock().unwrap();
-            t.insert(file_name.to_string(), template);
+            if let Some(file_name) = path.clone().file_name() {
+                if let Some(file_name) = file_name.to_str() {
+                    let res = File::open(path).and_then(|mut file| {
+                        let mut template = String::new();
+                        file.read_to_string(&mut template).map(|_| {
+                            let mut t = templates.lock().unwrap();
+                            t.insert(file_name.to_string(), template);
+                        })
+                    });
+                    match res {
+                        Ok(_) => info!("Template {} added successfully.", file_name),
+                        Err(e) => error!("Template {} didn't added. Error - {}.", file_name, e),
+                    }
+                }
+            }
         }
     }
 

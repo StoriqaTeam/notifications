@@ -31,7 +31,6 @@ pipeline:
     environment:
     - RUN_MODE=k8s
     - CARGO_HOME=deps
-    - OUT_DIR=/drone/out
     commands:
     - rustup component add rustfmt-preview
     - cargo fmt --all -- --write-mode=diff
@@ -49,11 +48,8 @@ pipeline:
     image: rust:1.26-stretch
     environment:
     - CARGO_HOME=deps
-    - OUT_DIR=/drone/out
     commands:
     - cargo build --release --locked
-    - mkdir /drone/out || true
-    - pwd && ls -lha
     when:
       event: push
       branch:

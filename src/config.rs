@@ -12,6 +12,7 @@ pub struct Config {
     pub client: Client,
     pub sendgrid: SendGridConf,
     pub graylog: Option<GrayLogConfig>,
+    pub templates: Option<Templates>,
 }
 
 /// Common server settings
@@ -36,6 +37,12 @@ pub struct SendGridConf {
     pub api_key: String,
     pub send_mail_path: String,
     pub from_email: String,
+}
+
+/// templates
+#[derive(Debug, Deserialize, Clone)]
+pub struct Templates {
+    pub path: String,
 }
 
 /// Creates new app config struct

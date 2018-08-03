@@ -53,6 +53,7 @@ pipeline:
     commands:
     - cargo build --release --locked
     - mkdir /drone/out || true
+    - pwd && ls -lha
     when:
       event: push
       branch:

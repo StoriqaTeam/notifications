@@ -84,14 +84,17 @@ pub fn start_server(config: config::Config) {
     let templates = Arc::new(Mutex::new(HashMap::new()));
 
     for entry in fs::read_dir(template_dir.clone()).unwrap() {
-        let path = entry.unwrap().path();
-        let p = path.clone();
-        let file_name = p.file_name().unwrap().to_str().unwrap();
-        let mut file = File::open(path).unwrap();
-        let mut template = String::new();
-        file.read_to_string(&mut template).unwrap();
-        let mut t = templates.lock().unwrap();
-        t.insert(file_name.to_string(), template);
+        let entry = entry.unwrap();
+        if !entry.file_type().unwrap().is_dir() {
+            let path = entry.path();
+            let p = path.clone();
+            let file_name = p.file_name().unwrap().to_str().unwrap();
+            let mut file = File::open(path).unwrap();
+            let mut template = String::new();
+            file.read_to_string(&mut template).unwrap();
+            let mut t = templates.lock().unwrap();
+            t.insert(file_name.to_string(), template);
+        }
     }
 
     let (tx, rx) = channel();

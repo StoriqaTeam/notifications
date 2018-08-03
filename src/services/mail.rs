@@ -1,5 +1,6 @@
-use std::fs::File;
-use std::io::prelude::*;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use failure::Error as FailureError;
 use failure::Fail;
@@ -46,16 +47,21 @@ pub struct SendGridServiceImpl {
     pub cpu_pool: CpuPool,
     pub http_client: ClientHandle,
     pub send_grid_conf: SendGridConf,
-    pub template_dir: String,
+    pub templates: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl SendGridServiceImpl {
-    pub fn new(cpu_pool: CpuPool, http_client: ClientHandle, send_grid_conf: SendGridConf, template_dir: String) -> Self {
+    pub fn new(
+        cpu_pool: CpuPool,
+        http_client: ClientHandle,
+        send_grid_conf: SendGridConf,
+        templates: Arc<Mutex<HashMap<String, String>>>,
+    ) -> Self {
         Self {
             cpu_pool,
             http_client,
             send_grid_conf,
-            template_dir,
+            templates,
         }
     }
 
@@ -65,33 +71,24 @@ impl SendGridServiceImpl {
     {
         let config = self.send_grid_conf.clone();
         let http_clone = self.http_client.clone();
-        let template_dir = self.template_dir.clone();
         let api_key = config.api_key.clone();
         let url = format!("{}/{}", config.api_addr.clone(), config.send_mail_path.clone());
         let handlebars = Handlebars::new();
-        let path = format!("{}/{}", template_dir, template);
+        let templates = self.templates.lock().unwrap();
+
         Box::new(
-            File::open(path.clone())
-                .map_err({
-                    let path = path.clone();
-                    move |e| e.context(format!("Couldn't find template file {}", path)).into()
-                })
-                .and_then(|mut file| {
-                    let mut template = String::new();
-                    file.read_to_string(&mut template)
-                        .map_err(move |e| e.context(format!("Couldn't read template file {}", path)).into())
-                        .map(|_| template)
-                })
-                .into_future()
+            templates
+                .get(template)
+                .ok_or_else(|| format_err!("Couldn't find template {}", template).into())
                 .and_then({
                     let mail = mail.clone();
                     move |template| {
                         handlebars
                             .render_template(&template, &mail)
-                            .into_future()
                             .map_err(move |e| e.context(format!("Couldn't render template {}", template)).into())
                     }
                 })
+                .into_future()
                 .and_then(move |text| {
                     let mut send_mail = mail.into_send_mail();
                     send_mail.text = text;

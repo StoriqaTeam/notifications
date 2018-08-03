@@ -46,14 +46,16 @@ pub struct SendGridServiceImpl {
     pub cpu_pool: CpuPool,
     pub http_client: ClientHandle,
     pub send_grid_conf: SendGridConf,
+    pub template_dir: String,
 }
 
 impl SendGridServiceImpl {
-    pub fn new(cpu_pool: CpuPool, http_client: ClientHandle, send_grid_conf: SendGridConf) -> Self {
+    pub fn new(cpu_pool: CpuPool, http_client: ClientHandle, send_grid_conf: SendGridConf, template_dir: String) -> Self {
         Self {
             cpu_pool,
             http_client,
             send_grid_conf,
+            template_dir,
         }
     }
 
@@ -63,10 +65,11 @@ impl SendGridServiceImpl {
     {
         let config = self.send_grid_conf.clone();
         let http_clone = self.http_client.clone();
+        let template_dir = self.template_dir.clone();
         let api_key = config.api_key.clone();
         let url = format!("{}/{}", config.api_addr.clone(), config.send_mail_path.clone());
         let handlebars = Handlebars::new();
-        let path = format!("{}/templates/{}", env!("OUT_DIR"), template);
+        let path = format!("{}/{}", template_dir, template);
         Box::new(
             File::open(path.clone())
                 .map_err({

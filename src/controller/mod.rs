@@ -43,7 +43,18 @@ impl ControllerImpl {
 
 impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
-        let mail_service = SendGridServiceImpl::new(self.cpu_pool.clone(), self.http_client.clone(), self.config.sendgrid.clone());
+        let template_dir = self.config
+            .templates
+            .clone()
+            .map(|t| t.path)
+            .unwrap_or_else(|| format!("{}/templates", env!("OUT_DIR")));
+
+        let mail_service = SendGridServiceImpl::new(
+            self.cpu_pool.clone(),
+            self.http_client.clone(),
+            self.config.sendgrid.clone(),
+            template_dir,
+        );
 
         let path = req.path().to_string();
 

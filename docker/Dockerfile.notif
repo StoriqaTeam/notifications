@@ -7,7 +7,9 @@ RUN wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | apt-key ad
     apt-get install -y libpq-dev
 
 # Install diesel client
-RUN cargo install diesel_cli
+RUN mkdir -p /usr/local/cargo/bin/ || true \
+  && wget -q https://s3.eu-central-1.amazonaws.com/dumpster.stq/diesel -O /usr/local/cargo/bin/diesel \
+  && chmod +x /usr/local/cargo/bin/diesel 
 
 # Utils for waiting for some service to be up before starting
 ADD wait_for_it.sh /utils/

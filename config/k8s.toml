@@ -1,3 +1,9 @@
+[server]
+host = "0.0.0.0"
+port = "8001"
+database = "postgresql://notifications:notifications@db-postgresql/notifications"
+thread_count = 20
+
 [sendgrid]
 api_addr = "https://api.sendgrid.com/v3"
 api_key = "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"

@@ -9,8 +9,10 @@ pub enum Error {
     NotFound,
     #[fail(display = "Parse error")]
     Parse,
-    #[fail(display = "Server is refusing to fullfil the reqeust")]
+    #[fail(display = "Server is refusing to fullfil the request")]
     Forbidden,
+    #[fail(display = "R2D2 connection error")]
+    Connection,
     #[fail(display = "Http client error")]
     HttpClient,
 }
@@ -21,6 +23,7 @@ impl Codeable for Error {
             Error::NotFound => StatusCode::NotFound,
             Error::Parse => StatusCode::UnprocessableEntity,
             Error::HttpClient => StatusCode::InternalServerError,
+            Error::Connection => StatusCode::InternalServerError,
             Error::Forbidden => StatusCode::Forbidden,
         }
     }

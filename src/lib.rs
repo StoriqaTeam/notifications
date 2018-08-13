@@ -1,6 +1,8 @@
 extern crate base64;
 extern crate chrono;
 extern crate config as config_crate;
+#[macro_use]
+extern crate diesel;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -11,6 +13,8 @@ extern crate hyper_tls;
 extern crate jsonwebtoken;
 #[macro_use]
 extern crate log;
+extern crate r2d2;
+extern crate r2d2_diesel;
 extern crate rand;
 extern crate regex;
 extern crate serde;
@@ -31,11 +35,14 @@ extern crate stq_http;
 extern crate stq_logging;
 extern crate stq_router;
 extern crate stq_static_resources;
+extern crate stq_types;
 
 pub mod config;
 pub mod controller;
 pub mod errors;
 pub mod models;
+pub mod repos;
+pub mod schema;
 pub mod services;
 
 use std::collections::HashMap;
@@ -47,14 +54,19 @@ use std::sync::{mpsc::channel, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+use diesel::pg::PgConnection;
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
 use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
+use r2d2_diesel::ConnectionManager;
 use tokio_core::reactor::Core;
 
 use stq_http::controller::Application;
+
+use repos::acl::RolesCacheImpl;
+use repos::repo_factory::ReposFactoryImpl;
 
 /// Starts new web service from provided `Config`
 pub fn start_server(config: config::Config) {
@@ -64,7 +76,23 @@ pub fn start_server(config: config::Config) {
     let mut core = Core::new().expect("Unexpected error creating event loop core");
     let handle = Arc::new(core.handle());
 
-    let address = config.server.address.parse().expect("Address must be set in configuration");
+    // Prepare database pool
+    let database_url: String = config.server.database.parse().expect("Database URL must be set in configuration");
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let r2d2_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
+
+    // Prepare server
+    let address = {
+        format!("{}:{}", config.server.host, config.server.port)
+            .parse()
+            .expect("Could not parse address")
+    };
+
+    // Roles cache
+    let roles_cache = RolesCacheImpl::default();
+
+    // Repo factory
+    let repo_factory = ReposFactoryImpl::new(roles_cache);
 
     let http_config = stq_http::client::Config {
         http_client_retries: config.client.http_client_retries,
@@ -139,12 +167,20 @@ pub fn start_server(config: config::Config) {
             }
         }
     });
-    let controller = controller::ControllerImpl::new(config.clone(), cpu_pool.clone(), client_handle.clone(), templates.clone());
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, {
             move || {
+                let controller = controller::ControllerImpl::new(
+                    r2d2_pool.clone(),
+                    config.clone(),
+                    cpu_pool.clone(),
+                    client_handle.clone(),
+                    templates.clone(),
+                    repo_factory.clone(),
+                );
+
                 // Prepare application
-                let app = Application::<errors::Error>::new(controller.clone());
+                let app = Application::<errors::Error>::new(controller);
 
                 Ok(app)
             }

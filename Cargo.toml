@@ -1,6 +1,7 @@
 [package]
 name = "notifications"
 version = "0.1.0"
+build = "build.rs"
 
 [lib]
 name = "notifications_lib"
@@ -38,3 +39,4 @@ uuid = { version = "*", features = ["use_std", "v4", "serde"] }
 native-tls = "0.1"
 handlebars = "1.0.0"
 mime = "0.3.8"
+notify = "4.0.0"

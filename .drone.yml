@@ -11,6 +11,7 @@ pipeline:
       - pull_request
       - push
       - tag
+
 ###
 # Test PR
 ###

@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use failure::Error as FailureError;
 use failure::Fail;
 use futures::prelude::*;
@@ -24,6 +28,10 @@ pub trait MailService {
     fn order_update_user(self, mail: OrderUpdateStateForUser) -> ServiceFuture<()>;
     /// Send Order Update State For Store
     fn order_update_store(self, mail: OrderUpdateStateForStore) -> ServiceFuture<()>;
+    /// Send Order Create State For Store
+    fn order_create_user(self, mail: OrderCreateForUser) -> ServiceFuture<()>;
+    /// Send Order Create State For Store
+    fn order_create_store(self, mail: OrderCreateForStore) -> ServiceFuture<()>;
     /// Send Email Verification For User
     fn email_verification(self, mail: EmailVerificationForUser) -> ServiceFuture<()>;
     /// Send Apply Email Verification For User
@@ -39,14 +47,21 @@ pub struct SendGridServiceImpl {
     pub cpu_pool: CpuPool,
     pub http_client: ClientHandle,
     pub send_grid_conf: SendGridConf,
+    pub templates: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl SendGridServiceImpl {
-    pub fn new(cpu_pool: CpuPool, http_client: ClientHandle, send_grid_conf: SendGridConf) -> Self {
+    pub fn new(
+        cpu_pool: CpuPool,
+        http_client: ClientHandle,
+        send_grid_conf: SendGridConf,
+        templates: Arc<Mutex<HashMap<String, String>>>,
+    ) -> Self {
         Self {
             cpu_pool,
             http_client,
             send_grid_conf,
+            templates,
         }
     }
 
@@ -59,12 +74,21 @@ impl SendGridServiceImpl {
         let api_key = config.api_key.clone();
         let url = format!("{}/{}", config.api_addr.clone(), config.send_mail_path.clone());
         let handlebars = Handlebars::new();
-        let template = template.to_string();
+        let templates = self.templates.lock().unwrap();
+
         Box::new(
-            handlebars
-                .render_template(&template, &mail)
+            templates
+                .get(template)
+                .ok_or_else(|| format_err!("Couldn't find template {}", template).into())
+                .and_then({
+                    let mail = mail.clone();
+                    move |template| {
+                        handlebars
+                            .render_template(&template, &mail)
+                            .map_err(move |e| e.context(format!("Couldn't render template {}", template)).into())
+                    }
+                })
                 .into_future()
-                .map_err(move |e| e.context(format!("Couldn't render template {}", template)).into())
                 .and_then(move |text| {
                     let mut send_mail = mail.into_send_mail();
                     send_mail.text = text;
@@ -120,61 +144,73 @@ impl MailService for SendGridServiceImpl {
     /// Send Order Update State For Store
     fn order_update_user(self, mail: OrderUpdateStateForUser) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/user_update_order.hbr");
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template(template, mail))
+                .spawn_fn(move || self.send_email_with_template("user_order_update.hbr", mail))
                 .map_err(|e: FailureError| e.context("Mail service, order_update_user endpoint error occured.").into()),
         )
     }
     /// Send Order Update State For Store
     fn order_update_store(self, mail: OrderUpdateStateForStore) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/store_update_order.hbr");
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template(template, mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .spawn_fn(move || self.send_email_with_template("store_order_update.hbr", mail))
+                .map_err(|e: FailureError| e.context("Mail service, order_update_store endpoint error occured.").into()),
+        )
+    }
+    /// Send Order Create State For Store
+    fn order_create_user(self, mail: OrderCreateForUser) -> ServiceFuture<()> {
+        let cpu_pool = self.cpu_pool.clone();
+        Box::new(
+            cpu_pool
+                .spawn_fn(move || self.send_email_with_template("user_order_create.hbr", mail))
+                .map_err(|e: FailureError| e.context("Mail service, order_create_user endpoint error occured.").into()),
+        )
+    }
+    /// Send Order Create State For Store
+    fn order_create_store(self, mail: OrderCreateForStore) -> ServiceFuture<()> {
+        let cpu_pool = self.cpu_pool.clone();
+        Box::new(
+            cpu_pool
+                .spawn_fn(move || self.send_email_with_template("store_order_create.hbr", mail))
+                .map_err(|e: FailureError| e.context("Mail service, order_create_store endpoint error occured.").into()),
         )
     }
     /// Send Email Verification For User
     fn email_verification(self, mail: EmailVerificationForUser) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/user_email_verification.hbr");
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template(template, mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .spawn_fn(move || self.send_email_with_template("user_email_verification.hbr", mail))
+                .map_err(|e: FailureError| e.context("Mail service, email_verification endpoint error occured.").into()),
         )
     }
     /// Send Apply Email Verification For User
     fn apply_email_verification(self, mail: ApplyEmailVerificationForUser) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/user_email_verification_apply.hbr");
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template(template, mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .spawn_fn(move || self.send_email_with_template("user_email_verification_apply.hbr", mail))
+                .map_err(|e: FailureError| e.context("Mail service, apply_email_verification endpoint error occured.").into()),
         )
     }
     /// Send Password Reset For User
     fn password_reset(self, mail: PasswordResetForUser) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/user_reset_password.hbr");
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template(template, mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .spawn_fn(move || self.send_email_with_template("user_reset_password.hbr", mail))
+                .map_err(|e: FailureError| e.context("Mail service, password_reset endpoint error occured.").into()),
         )
     }
     /// Send Apply Password Reset For User
     fn apply_password_reset(self, mail: ApplyPasswordResetForUser) -> ServiceFuture<()> {
         let cpu_pool = self.cpu_pool.clone();
-        let template = include_str!("../templates/user_reset_password_apply.hbr");
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template(template, mail))
-                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                .spawn_fn(move || self.send_email_with_template("user_reset_password_apply.hbr", mail))
+                .map_err(|e: FailureError| e.context("Mail service, apply_password_reset endpoint error occured.").into()),
         )
     }
 }

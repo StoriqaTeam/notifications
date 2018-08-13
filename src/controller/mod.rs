@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use failure::Fail;
 use futures::future;
@@ -21,29 +23,43 @@ use errors::Error;
 use services::mail::{MailService, SendGridServiceImpl};
 
 pub mod routes;
+
+#[derive(Clone)]
 pub struct ControllerImpl {
     pub config: config::Config,
     pub cpu_pool: CpuPool,
     pub route_parser: Arc<RouteParser<Route>>,
     pub http_client: ClientHandle,
+    pub templates: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl ControllerImpl {
     /// Create a new controller based on services
-    pub fn new(config: config::Config, cpu_pool: CpuPool, http_client: ClientHandle) -> Self {
+    pub fn new(
+        config: config::Config,
+        cpu_pool: CpuPool,
+        http_client: ClientHandle,
+        templates: Arc<Mutex<HashMap<String, String>>>,
+    ) -> Self {
         let route_parser = Arc::new(routes::create_route_parser());
         Self {
             config,
             cpu_pool,
             route_parser,
             http_client,
+            templates,
         }
     }
 }
 
 impl Controller for ControllerImpl {
     fn call(&self, req: Request) -> ControllerFuture {
-        let mail_service = SendGridServiceImpl::new(self.cpu_pool.clone(), self.http_client.clone(), self.config.sendgrid.clone());
+        let mail_service = SendGridServiceImpl::new(
+            self.cpu_pool.clone(),
+            self.http_client.clone(),
+            self.config.sendgrid.clone(),
+            self.templates.clone(),
+        );
 
         let path = req.path().to_string();
 
@@ -87,6 +103,26 @@ impl Controller for ControllerImpl {
                             .into()
                     })
                     .and_then(move |mail| mail_service.email_verification(mail)),
+            ),
+            // POST /stores/order-create
+            (&Post, Some(Route::OrderCreateForStore)) => serialize_future(
+                parse_body::<OrderCreateForStore>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body // POST /stores/order-create in OrderCreateForStore failed!")
+                            .context(Error::Parse)
+                            .into()
+                    })
+                    .and_then(move |mail| mail_service.order_create_store(mail)),
+            ),
+            // POST /users/order-create
+            (&Post, Some(Route::OrderCreateForUser)) => serialize_future(
+                parse_body::<OrderCreateForUser>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body // POST /users/order-create in OrderCreateForUser failed!")
+                            .context(Error::Parse)
+                            .into()
+                    })
+                    .and_then(move |mail| mail_service.order_create_user(mail)),
             ),
             // POST /users/apply-email-verification
             (&Post, Some(Route::ApplyEmailVerificationForUser)) => serialize_future(

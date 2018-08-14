@@ -3,7 +3,7 @@ DELETE FROM templates;
 ALTER SEQUENCE templates_id_seq RESTART WITH 1;
 
 INSERT INTO templates(name, data ) VALUES
-("store_order_create", "<html>
+('store_order_create', '<html>
   <head>
     <title>New order {{order_slug}}</title>
   </head>
@@ -11,7 +11,7 @@ INSERT INTO templates(name, data ) VALUES
     <p>
       Please be informed that you have a new order {{order_slug}}. 
       <br/>
-      You can watch your order on <a href="{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}">this page</a> .
+      You can watch your order on <a href= &quot;{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}&quot;>this page</a> .
       <br/>
       Best regards,
       Storiqa Team
@@ -21,8 +21,8 @@ INSERT INTO templates(name, data ) VALUES
     </p>
 
   </body>
-</html>"),
-("store_order_update", "<html>
+</html>'),
+('store_order_update', '<html>
   <head>
     <title>The order {{order_slug}} status</title>
   </head>
@@ -30,7 +30,7 @@ INSERT INTO templates(name, data ) VALUES
     <p>
       Please be informed that the order {{order_slug}} status has changed to {{order_state}}.
       <br/>
-      You can watch your order on <a href="{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}">this page</a> .
+      You can watch your order on <a href=&quot;{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}&quot;>this page</a> .
       <br/>
       Best regards,
       Storiqa Team
@@ -41,8 +41,8 @@ INSERT INTO templates(name, data ) VALUES
 
   </body>
 </html>
-"),
-("user_email_verification_apply", "<html>
+'),
+('user_email_verification_apply', '<html>
   <head>
     <title>Successful registration on Storiqa</title>
   </head>
@@ -61,8 +61,8 @@ INSERT INTO templates(name, data ) VALUES
 
   </body>
 </html>
-"),
-("user_email_verification", "<html>
+'),
+('user_email_verification', '<html>
   <head>
     <title>Verify your account on Storiqa</title>
   </head>
@@ -72,22 +72,22 @@ INSERT INTO templates(name, data ) VALUES
       <br/>
       Thank you for signing up for Storiqa! In order to finish the registration process and verify your account, please confirm your e-mail by following the link below:
       
-     <a href="{{verify_email_path}}/{{token}}">Verify my email on Storiqa.</a>
+     <a href=&quot;{{verify_email_path}}/{{token}}&quot;>Verify my email on Storiqa.</a>
       <br/>
 
       Best regards,
       Storiqa Team
       <br/>
       
-      Note: If you didn't initiate the request, please delete this e-mail. 
+      Note: If you didn&apos;t initiate the request, please delete this e-mail. 
       <br/>
       <i>This is an automatically generated e-mail – please do not reply to it.</i>
     </p>
 
   </body>
 </html>
-"),
-("user_order_create", "<html>
+'),
+('user_order_create', '<html>
   <head>
     <title>New order {{order_slug}}</title>
   </head>
@@ -97,7 +97,7 @@ INSERT INTO templates(name, data ) VALUES
       <br/>
       Please be informed that you have a new order {{order_slug}}. 
       <br/>
-      You can watch your order on <a href="{{cluster_url}}/profile/orders/{{order_slug}}">this page</a>.
+      You can watch your order on <a href=&quot;{{cluster_url}}/profile/orders/{{order_slug}}&quot;>this page</a>.
       <br/>
       Best regards,
       Storiqa Team
@@ -108,8 +108,8 @@ INSERT INTO templates(name, data ) VALUES
 
   </body>
 </html>
-"),
-("user_order_update", "<html>
+'),
+('user_order_update', '<html>
   <head>
     <title>The order {{order_slug}} status</title>
   </head>
@@ -119,7 +119,7 @@ INSERT INTO templates(name, data ) VALUES
       <br/>
       Please be informed that the order {{order_slug}} status has changed to {{order_state}}.
       <br/>
-      You can watch your order on <a href="{{cluster_url}}/profile/orders/{{order_slug}}">this page</a>.
+      You can watch your order on <a href=&quot;{{cluster_url}}/profile/orders/{{order_slug}}&quot;>this page</a>.
       <br/>
       Best regards,
       Storiqa Team
@@ -130,8 +130,8 @@ INSERT INTO templates(name, data ) VALUES
 
   </body>
 </html>
-"),
-("user_reset_password_apply", "<html>
+'),
+('user_reset_password_apply', '<html>
   <head>
     <title>Successful password reset on Storiqa</title>
   </head>
@@ -142,7 +142,7 @@ INSERT INTO templates(name, data ) VALUES
 
         Congratulations! Your password has been changed successfully!
       <br/>
-        <a href="http://storiqa.com">Let's go Storiqa!</a>
+        <a href=&quot;http://storiqa.com&quot;>Let&apos;s go Storiqa!</a>
       <br/>
         This is an automatically generated email – please do not reply to it.
       <br/>
@@ -151,8 +151,8 @@ INSERT INTO templates(name, data ) VALUES
 
   </body>
 </html>
-"),
-("user_reset_password", "<html>
+'),
+('user_reset_password', '<html>
   <head>
     <title>Password reset on Storiqa</title>
   </head>
@@ -163,14 +163,14 @@ INSERT INTO templates(name, data ) VALUES
       
       You received this e-mail because you have made a request to change your password. In order to do that, please follow the link below:
       
-     <a href="{{reset_password_path}}/{{token}}">Reset my password on Storiqa.</a>
+     <a href=&quot;{{reset_password_path}}/{{token}}&quot;>Reset my password on Storiqa.</a>
       <br/>
       
       Best regards,
       Storiqa Team
       <br/>
       
-      Note: If you have received a password-reset email you didn't request, it's likely that someone entered your e-mail address by mistake. If you didn't initiate this request, please delete this e-mail. Your privacy and security aren't compromised by this e-mail.
+      Note: If you have received a password-reset email you didn&apos;t request, it&apos;s likely that someone entered your e-mail address by mistake. If you didn&apos;t initiate this request, please delete this e-mail. Your privacy and security aren&apos;t compromised by this e-mail.
       <br/>
       <i>This is an automatically generated e-mail – please do not reply to it.</i>
 
@@ -178,4 +178,4 @@ INSERT INTO templates(name, data ) VALUES
 
   </body>
 </html>
-");
+');

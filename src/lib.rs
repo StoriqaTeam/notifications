@@ -45,7 +45,7 @@ pub mod schema;
 pub mod services;
 
 use std::process;
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use diesel::pg::PgConnection;
 use futures::future;
@@ -94,7 +94,7 @@ pub fn start_server(config: config::Config) {
     let client_handle = client.handle();
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
-   
+
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, {
             move || {

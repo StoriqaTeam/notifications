@@ -43,6 +43,8 @@ pub trait MailService {
     fn password_reset(self, mail: PasswordResetForUser) -> ServiceFuture<()>;
     /// Send Apply Password Reset For User
     fn apply_password_reset(self, mail: ApplyPasswordResetForUser) -> ServiceFuture<()>;
+    /// Get template by name
+    fn get_template_by_name(self, template_name: String) -> ServiceFuture<String>;
 }
 
 /// SendGrid service implementation
@@ -243,6 +245,30 @@ where
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template("user_reset_password_apply".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, apply_password_reset endpoint error occured.").into()),
+        )
+    }
+
+    fn get_template_by_name(self, template_name: String) -> ServiceFuture<String> {
+        let db_pool = self.db_pool.clone();
+        let repo_factory = self.repo_factory.clone();
+        let user_id = self.user_id;
+        let cpu_pool = self.cpu_pool.clone();
+
+        Box::new(
+            cpu_pool
+                .spawn_fn(move || {
+                    db_pool
+                        .get()
+                        .map_err(|e| e.context(Error::Connection).into())
+                        .and_then(move |conn| {
+                            let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
+                            templates_repo
+                                .get_template_by_name(template_name.clone())
+                                .map(|template| template.data)
+                                .map_err(|e| e.context(format!("Get template by name {} error occured", template_name)).into())
+                        })
+                })
+                .map_err(|e: FailureError| e.context("Service MailService, get endpoint error occured.").into()),
         )
     }
 }

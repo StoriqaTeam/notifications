@@ -122,6 +122,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.order_update_user(mail)),
             ),
+            // GET /users/template-order-update-state
+            (&Get, Some(Route::TemplateOrderUpdateStateForUser)) => {
+                serialize_future(serialize_future(mail_service.get_template_by_name("user_order_update".to_string())))
+            }
             // POST /stores/order-update-state
             (&Post, Some(Route::OrderUpdateStateForStore)) => serialize_future(
                 parse_body::<OrderUpdateStateForStore>(req.body())

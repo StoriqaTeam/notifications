@@ -52,12 +52,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> TemplatesRepo for TemplatesRepoImpl<'a, T> {
-    fn get_template_by_name(&self, template: String) -> RepoResult<Template> {
-        debug!("get template by name {}.", template);
-        let query = templates.filter(name.eq(&template));
-        query
-            .get_result(self.db_conn)
-            .map_err(|e| e.context(format!("Get template by name {} error occured", template)).into())
+    fn get_template_by_name(&self, template_name: String) -> RepoResult<Template> {
+        debug!("get template by name {}.", template_name);
+        self.execute_query(templates.filter(name.eq(template_name.clone())))
+            .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Update, self, Some(&template)).map(|_| template))
+            .map_err(|e: FailureError| e.context(format!("Getting template with name {} failed.", template_name)).into())
     }
 
     fn create(&self, payload: NewTemplate) -> RepoResult<Template> {

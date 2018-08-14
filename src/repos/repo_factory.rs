@@ -173,6 +173,7 @@ pub mod tests {
 
         fn update(&self, template_name: String, payload: UpdateTemplate) -> RepoResult<Template> {
             Ok(Template {
+                id: 1,
                 name: payload.name,
                 data: payload.data,
             })

@@ -12,6 +12,3 @@ from_email = "support@storiqa.com"
 
 [graylog]
 addr = "udplog.stq.cloud:32303"
-
-[templates]
-path = "/app/templates"

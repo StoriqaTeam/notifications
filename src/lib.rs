@@ -25,7 +25,6 @@ extern crate lettre;
 extern crate lettre_email;
 extern crate mime;
 extern crate native_tls;
-extern crate notify;
 extern crate serde_json;
 extern crate sha3;
 extern crate tokio_core;
@@ -45,20 +44,14 @@ pub mod repos;
 pub mod schema;
 pub mod services;
 
-use std::collections::HashMap;
-use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
 use std::process;
-use std::sync::{mpsc::channel, Arc, Mutex};
-use std::time::Duration;
+use std::sync::{Arc};
 
 use diesel::pg::PgConnection;
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
-use notify::{watcher, RecursiveMode, Watcher};
 use r2d2_diesel::ConnectionManager;
 use tokio_core::reactor::Core;
 
@@ -101,43 +94,7 @@ pub fn start_server(config: config::Config) {
     let client_handle = client.handle();
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
-
-    let template_dir = config
-        .templates
-        .clone()
-        .map(|t| t.path)
-        .unwrap_or_else(|| format!("{}/templates", env!("OUT_DIR")));
-
-    let templates = Arc::new(Mutex::new(HashMap::new()));
-
-    for entry in fs::read_dir(template_dir.clone()).unwrap() {
-        let entry = entry.unwrap();
-        if !entry.file_type().unwrap().is_dir() {
-            let path = entry.path();
-            if let Some(file_name) = path.clone().file_name() {
-                if let Some(file_name) = file_name.to_str() {
-                    let res = File::open(path).and_then(|mut file| {
-                        let mut template = String::new();
-                        file.read_to_string(&mut template).map(|_| {
-                            let mut t = templates.lock().unwrap();
-                            t.insert(file_name.to_string(), template);
-                        })
-                    });
-                    match res {
-                        Ok(_) => info!("Template {} added successfully.", file_name),
-                        Err(e) => error!("Template {} didn't added. Error - {}.", file_name, e),
-                    }
-                }
-            }
-        }
-    }
-
-    let (tx, rx) = channel();
-
-    let mut watcher = watcher(tx, Duration::from_secs(10)).unwrap();
-
-    watcher.watch(template_dir, RecursiveMode::Recursive).unwrap();
-
+   
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, {
             move || {

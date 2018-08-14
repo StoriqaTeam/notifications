@@ -17,6 +17,14 @@ pub struct NewTemplate {
     pub data: String,
 }
 
+/// Payload for updating templaes
+#[derive(Serialize, Deserialize, Insertable, AsChangeset, Clone, Debug)]
+#[table_name = "templates"]
+pub struct UpdateTemplate {
+    pub name: String,
+    pub data: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OldTemplate {
     pub name: String,

@@ -171,6 +171,10 @@ pub mod tests {
             })
         }
 
+        fn update(&self, template_name: String, payload: UpdateTemplate) -> RepoResult<Template> {
+            Ok(payload)
+        }
+
         fn delete(&self, payload: OldTemplate) -> RepoResult<Template> {
             Ok(Template {
                 id: 1,

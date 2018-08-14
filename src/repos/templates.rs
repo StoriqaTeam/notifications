@@ -5,14 +5,16 @@ use diesel;
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::prelude::*;
+use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
 use failure::Fail;
 
+use super::acl;
 use super::types::RepoResult;
 use models::authorization::*;
-use models::{NewTemplate, OldTemplate, Template};
+use models::{NewTemplate, OldTemplate, Template, UpdateTemplate};
 use repos::legacy_acl::*;
 use stq_types::UserId;
 
@@ -25,6 +27,9 @@ pub trait TemplatesRepo {
 
     /// Create a new template
     fn create(&self, payload: NewTemplate) -> RepoResult<Template>;
+
+    /// Update template
+    fn update(&self, temlate_name: String, payload: UpdateTemplate) -> RepoResult<Template>;
 
     /// Delete template
     fn delete(&self, payload: OldTemplate) -> RepoResult<Template>;
@@ -39,6 +44,10 @@ pub struct TemplatesRepoImpl<'a, T: Connection<Backend = Pg, TransactionManager 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> TemplatesRepoImpl<'a, T> {
     pub fn new(db_conn: &'a T, acl: Box<Acl<Resource, Action, Scope, FailureError, Template>>) -> Self {
         Self { db_conn, acl }
+    }
+
+    fn execute_query<Ty: Send + 'static, U: LoadQuery<T, Ty> + Send + 'static>(&self, query: U) -> RepoResult<Ty> {
+        query.get_result::<Ty>(self.db_conn).map_err(From::from)
     }
 }
 
@@ -57,6 +66,23 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
         query
             .get_result(self.db_conn)
             .map_err(|e| e.context(format!("create new template {:?}.", payload)).into())
+    }
+
+    fn update(&self, template_name: String, payload: UpdateTemplate) -> RepoResult<Template> {
+        debug!("Updating template with name {} and payload {:?}.", template_name, payload);
+        self.execute_query(templates.filter(name.eq(template_name.clone())))
+            .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Update, self, Some(&template)))
+            .and_then(|_| {
+                let filter = templates.filter(name.eq(template_name.clone()));
+                let query = diesel::update(filter).set(&payload);
+                query.get_result(self.db_conn).map_err(From::from)
+            })
+            .map_err(|e: FailureError| {
+                e.context(format!(
+                    "Updating template with name {} and payload {:?} failed.",
+                    template_name, payload
+                )).into()
+            })
     }
 
     fn delete(&self, payload: OldTemplate) -> RepoResult<Template> {

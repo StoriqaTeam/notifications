@@ -173,6 +173,7 @@ pub mod tests {
 
     use stq_types::*;
 
+    use super::*;
     use models::*;
     use repos::repo_factory::tests::*;
     use services::*;

@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
-
 use failure::Error as FailureError;
 use failure::Fail;
 use futures::prelude::*;
@@ -15,11 +11,18 @@ use serde_json;
 
 use stq_http::client::ClientHandle;
 use stq_static_resources::*;
+use stq_types::UserId;
+
+use diesel::connection::AnsiTransactionManager;
+use diesel::pg::Pg;
+use diesel::Connection;
+use r2d2::{ManageConnection, Pool};
 
 use super::types::ServiceFuture;
 use config::SendGridConf;
 use errors::Error;
 use models::SendGridPayload;
+use repos::ReposFactory;
 
 pub trait MailService {
     /// Send simple mail
@@ -43,59 +46,83 @@ pub trait MailService {
 }
 
 /// SendGrid service implementation
-pub struct SendGridServiceImpl {
+pub struct SendGridServiceImpl<T, M, F>
+where
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+    M: ManageConnection<Connection = T>,
+    F: ReposFactory<T>,
+{
     pub cpu_pool: CpuPool,
     pub http_client: ClientHandle,
+    pub user_id: Option<UserId>,
     pub send_grid_conf: SendGridConf,
-    pub templates: Arc<Mutex<HashMap<String, String>>>,
+    pub db_pool: Pool<M>,
+    pub repo_factory: F,
 }
 
-impl SendGridServiceImpl {
+impl<T, M, F> SendGridServiceImpl<T, M, F>
+where
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+    M: ManageConnection<Connection = T>,
+    F: ReposFactory<T>,
+{
     pub fn new(
         cpu_pool: CpuPool,
         http_client: ClientHandle,
+        user_id: Option<UserId>,
         send_grid_conf: SendGridConf,
-        templates: Arc<Mutex<HashMap<String, String>>>,
+        db_pool: Pool<M>,
+        repo_factory: F,
     ) -> Self {
         Self {
             cpu_pool,
             http_client,
+            user_id,
             send_grid_conf,
-            templates,
+            db_pool,
+            repo_factory,
         }
     }
 
-    pub fn send_email_with_template<T>(self, template: &str, mail: T) -> Box<Future<Item = (), Error = FailureError> + Send>
+    pub fn send_email_with_template<E>(self, template_name: String, mail: E) -> Box<Future<Item = (), Error = FailureError> + Send>
     where
-        T: Email + Serialize + Clone + 'static + Send,
+        E: Email + Serialize + Clone + 'static + Send,
     {
         let config = self.send_grid_conf.clone();
         let http_clone = self.http_client.clone();
         let api_key = config.api_key.clone();
         let url = format!("{}/{}", config.api_addr.clone(), config.send_mail_path.clone());
         let handlebars = Handlebars::new();
-        let templates = self.templates.lock().unwrap();
+        let db_pool = self.db_pool.clone();
+        let repo_factory = self.repo_factory.clone();
+        let user_id = self.user_id;
+        let cpu_pool = self.cpu_pool.clone();
 
         Box::new(
-            templates
-                .get(template)
-                .ok_or_else(|| format_err!("Couldn't find template {}", template).into())
-                .and_then({
-                    let mail = mail.clone();
-                    move |template| {
-                        handlebars
-                            .render_template(&template, &mail)
-                            .map_err(move |e| e.context(format!("Couldn't render template {}", template)).into())
-                    }
-                })
-                .into_future()
-                .and_then(move |text| {
-                    let mut send_mail = mail.into_send_mail();
-                    send_mail.text = text;
-                    let payload = SendGridPayload::from_send_mail(send_mail, config.from_email.clone(), TEXT_HTML);
-                    serde_json::to_string(&payload)
-                        .into_future()
-                        .map_err(|e| e.context("Couldn't parse payload").into())
+            cpu_pool
+                .spawn_fn(move || {
+                    db_pool
+                        .get()
+                        .map_err(|e| e.context(Error::Connection).into())
+                        .and_then(move |conn| {
+                            let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
+                            templates_repo
+                                .get_template_by_name(template_name.clone())
+                                .and_then({
+                                    let mail = mail.clone();
+                                    move |template| {
+                                        handlebars
+                                            .render_template(&template.data, &mail)
+                                            .map_err(move |e| e.context(format!("Couldn't render template {}", template.name)).into())
+                                    }
+                                })
+                                .and_then(move |text| {
+                                    let mut send_mail = mail.into_send_mail();
+                                    send_mail.text = text;
+                                    let payload = SendGridPayload::from_send_mail(send_mail, config.from_email.clone(), TEXT_HTML);
+                                    serde_json::to_string(&payload).map_err(|e| e.context("Couldn't parse payload").into())
+                                })
+                        })
                 })
                 .and_then(move |body| {
                     debug!("Sending payload: {}", &body);
@@ -111,7 +138,12 @@ impl SendGridServiceImpl {
     }
 }
 
-impl MailService for SendGridServiceImpl {
+impl<T, M, F> MailService for SendGridServiceImpl<T, M, F>
+where
+    T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
+    M: ManageConnection<Connection = T>,
+    F: ReposFactory<T>,
+{
     fn send_mail(self, mail: SimpleMail) -> ServiceFuture<()> {
         let http_clone = self.http_client.clone();
         let config = self.send_grid_conf.clone();
@@ -146,7 +178,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("user_order_update.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("user_order_update".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, order_update_user endpoint error occured.").into()),
         )
     }
@@ -155,7 +187,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("store_order_update.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("store_order_update".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, order_update_store endpoint error occured.").into()),
         )
     }
@@ -164,7 +196,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("user_order_create.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("user_order_create".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, order_create_user endpoint error occured.").into()),
         )
     }
@@ -173,7 +205,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("store_order_create.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("store_order_create".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, order_create_store endpoint error occured.").into()),
         )
     }
@@ -182,7 +214,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("user_email_verification.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("user_email_verification".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, email_verification endpoint error occured.").into()),
         )
     }
@@ -191,7 +223,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("user_email_verification_apply.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("user_email_verification_apply".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, apply_email_verification endpoint error occured.").into()),
         )
     }
@@ -200,7 +232,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("user_reset_password.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("user_reset_password".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, password_reset endpoint error occured.").into()),
         )
     }
@@ -209,7 +241,7 @@ impl MailService for SendGridServiceImpl {
         let cpu_pool = self.cpu_pool.clone();
         Box::new(
             cpu_pool
-                .spawn_fn(move || self.send_email_with_template("user_reset_password_apply.hbr", mail))
+                .spawn_fn(move || self.send_email_with_template("user_reset_password_apply".to_string(), mail))
                 .map_err(|e: FailureError| e.context("Mail service, apply_password_reset endpoint error occured.").into()),
         )
     }

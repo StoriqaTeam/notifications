@@ -1,15 +1,20 @@
 table! {
     templates (id) {
-        id -> Integer,
-        name -> VarChar,
-        data -> VarChar,
+        id -> Int4,
+        name -> Varchar,
+        data -> Varchar,
     }
 }
 
 table! {
     user_roles (id) {
-        id -> Integer,
-        user_id -> Integer,
-        role -> VarChar,
+        id -> Int4,
+        user_id -> Int4,
+        role -> Varchar,
     }
 }
+
+allow_tables_to_appear_in_same_query!(
+    templates,
+    user_roles,
+);

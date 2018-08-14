@@ -1,8 +1,8 @@
-DELETE FROM notifications;
+DELETE FROM templates;
 
-ALTER SEQUENCE notifications_id_seq RESTART WITH 1;
+ALTER SEQUENCE templates_id_seq RESTART WITH 1;
 
-INSERT INTO notifications(name, data ) VALUES
+INSERT INTO templates(name, data ) VALUES
 ("store_order_create", "<html>
   <head>
     <title>New order {{order_slug}}</title>

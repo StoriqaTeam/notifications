@@ -1,9 +1,7 @@
 pub mod routes;
 
-use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
@@ -48,7 +46,6 @@ where
     pub route_parser: Arc<RouteParser<Route>>,
     pub repo_factory: F,
     pub http_client: ClientHandle,
-    pub templates: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl<
@@ -58,14 +55,7 @@ impl<
     > ControllerImpl<T, M, F>
 {
     /// Create a new controller based on services
-    pub fn new(
-        db_pool: Pool<M>,
-        config: config::Config,
-        cpu_pool: CpuPool,
-        http_client: ClientHandle,
-        templates: Arc<Mutex<HashMap<String, String>>>,
-        repo_factory: F,
-    ) -> Self {
+    pub fn new(db_pool: Pool<M>, config: config::Config, cpu_pool: CpuPool, http_client: ClientHandle, repo_factory: F) -> Self {
         let route_parser = Arc::new(routes::create_route_parser());
         Self {
             db_pool,
@@ -74,7 +64,6 @@ impl<
             route_parser,
             repo_factory,
             http_client,
-            templates,
         }
     }
 }
@@ -102,8 +91,10 @@ impl<
         let mail_service = SendGridServiceImpl::new(
             self.cpu_pool.clone(),
             self.http_client.clone(),
+            user_id,
             self.config.sendgrid.clone(),
-            self.templates.clone(),
+            self.db_pool.clone(),
+            self.repo_factory.clone(),
         );
 
         let user_roles_service = UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), self.repo_factory.clone());

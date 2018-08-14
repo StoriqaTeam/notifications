@@ -51,7 +51,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::process;
 use std::sync::{mpsc::channel, Arc, Mutex};
-use std::thread;
 use std::time::Duration;
 
 use diesel::pg::PgConnection;
@@ -59,7 +58,7 @@ use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
-use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
+use notify::{watcher, RecursiveMode, Watcher};
 use r2d2_diesel::ConnectionManager;
 use tokio_core::reactor::Core;
 
@@ -139,34 +138,6 @@ pub fn start_server(config: config::Config) {
 
     watcher.watch(template_dir, RecursiveMode::Recursive).unwrap();
 
-    thread::spawn({
-        let templates = templates.clone();
-        move || loop {
-            match rx.recv() {
-                Ok(event) => match event {
-                    DebouncedEvent::Write(p) => {
-                        if let Some(file_name) = p.clone().file_name() {
-                            if let Some(file_name) = file_name.to_str() {
-                                let res = File::open(p).and_then(|mut file| {
-                                    let mut template = String::new();
-                                    file.read_to_string(&mut template).map(|_| {
-                                        let mut t = templates.lock().unwrap();
-                                        t.insert(file_name.to_string(), template);
-                                    })
-                                });
-                                match res {
-                                    Ok(_) => info!("Template {} updated successfully.", file_name),
-                                    Err(e) => error!("Template {} updated with error - {}.", file_name, e),
-                                }
-                            }
-                        }
-                    }
-                    _ => (),
-                },
-                Err(e) => error!("watch templates error: {:?}", e),
-            }
-        }
-    });
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, {
             move || {
@@ -175,7 +146,6 @@ pub fn start_server(config: config::Config) {
                     config.clone(),
                     cpu_pool.clone(),
                     client_handle.clone(),
-                    templates.clone(),
                     repo_factory.clone(),
                 );
 

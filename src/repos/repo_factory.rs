@@ -11,6 +11,7 @@ use repos::*;
 
 pub trait ReposFactory<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static>: Clone + Send + 'static {
     fn create_user_roles_repo<'a>(&self, db_conn: &'a C) -> Box<UserRolesRepo + 'a>;
+    fn create_templates_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<TemplatesRepo + 'a>;
 }
 
 #[derive(Clone)]
@@ -53,5 +54,10 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
             Box::new(SystemACL::default()) as Box<Acl<Resource, Action, Scope, FailureError, UserRole>>,
             self.roles_cache.clone(),
         )) as Box<UserRolesRepo>
+    }
+
+    fn create_templates_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<TemplatesRepo + 'a> {
+        let acl = self.get_acl(db_conn, user_id);
+        Box::new(TemplatesRepoImpl::new(db_conn, acl)) as Box<TemplatesRepo>
     }
 }

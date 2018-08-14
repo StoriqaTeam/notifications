@@ -49,14 +49,9 @@ pub struct ApplicationAcl {
 impl ApplicationAcl {
     pub fn new(roles: Vec<UsersRole>, user_id: UserId) -> Self {
         let mut hash = ::std::collections::HashMap::new();
-        hash.insert(UsersRole::Superuser, vec![permission!(Resource::Templates)]);
         hash.insert(
-            UsersRole::User,
-            vec![
-                permission!(Resource::Templates, Action::Read),
-                permission!(Resource::Templates, Action::All, Scope::Owned),
-                permission!(Resource::UserRoles, Action::Read, Scope::Owned),
-            ],
+            UsersRole::Superuser,
+            vec![permission!(Resource::Templates), permission!(Resource::UserRoles)],
         );
 
         ApplicationAcl {
@@ -117,4 +112,6 @@ impl<T> Acl<Resource, Action, Scope, FailureError, T> for UnauthorizedAcl {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    // write tests
+}

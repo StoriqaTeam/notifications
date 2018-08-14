@@ -1,5 +1,5 @@
-CREATE TABLE notifications (
+CREATE TABLE templates (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,
-    data VARCHAR NOT NULL,    
+    data VARCHAR NOT NULL    
 );

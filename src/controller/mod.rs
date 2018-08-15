@@ -12,7 +12,7 @@ use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::header::{Authorization, Cookie};
 use hyper::server::Request;
-use hyper::{Delete, Get, Post};
+use hyper::{Delete, Get, Post, Put};
 use r2d2::{ManageConnection, Pool};
 
 use stq_http::client::ClientHandle;
@@ -126,6 +126,22 @@ impl<
             (&Get, Some(Route::TemplateOrderUpdateStateForUser)) => {
                 serialize_future(mail_service.get_template_by_name("user_order_update".to_string()))
             }
+            // PUT /users/template-order-update-state
+            (&Put, Some(Route::TemplateOrderUpdateStateForUser)) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // PUT /users/template-order-update-state",
+                    user_id
+                );
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /users/template-order-update-state in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| mail_service.update_template("user_order_update".to_string(), update_template)),
+                )
+            }
             // POST /stores/order-update-state
             (&Post, Some(Route::OrderUpdateStateForStore)) => serialize_future(
                 parse_body::<OrderUpdateStateForStore>(req.body())
@@ -139,6 +155,22 @@ impl<
             // GET /stores/template-order-update-state
             (&Get, Some(Route::TemplateOrderUpdateStateForStore)) => {
                 serialize_future(mail_service.get_template_by_name("store_order_update".to_string()))
+            }
+            // PUT /stores/template-order-update-state
+            (&Put, Some(Route::TemplateOrderUpdateStateForStore)) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // PUT /stores/template-order-update-state",
+                    user_id
+                );
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /stores/template-order-update-state in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| mail_service.update_template("store_order_update".to_string(), update_template)),
+                )
             }
             // POST /users/email-verification
             (&Post, Some(Route::EmailVerificationForUser)) => serialize_future(
@@ -154,6 +186,24 @@ impl<
             (&Get, Some(Route::TemplateEmailVerificationForUser)) => {
                 serialize_future(mail_service.get_template_by_name("user_email_verification".to_string()))
             }
+            // PUT /users/template-email-verification
+            (&Put, Some(Route::TemplateEmailVerificationForUser)) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // PUT /users/template-email-verification",
+                    user_id
+                );
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /users/template-email-verification in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| {
+                            mail_service.update_template("user_email_verification".to_string(), update_template)
+                        }),
+                )
+            }
             // POST /stores/order-create
             (&Post, Some(Route::OrderCreateForStore)) => serialize_future(
                 parse_body::<OrderCreateForStore>(req.body())
@@ -167,6 +217,19 @@ impl<
             // GET /stores/template-order-create
             (&Get, Some(Route::TemplateOrderCreateForStore)) => {
                 serialize_future(mail_service.get_template_by_name("store_order_create".to_string()))
+            }
+            // PUT /stores/template-order-create
+            (&Put, Some(Route::TemplateOrderCreateForStore)) => {
+                debug!("User with id = '{:?}' is requesting // PUT /stores/template-order-create", user_id);
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /stores/template-order-create in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| mail_service.update_template("store_order_create".to_string(), update_template)),
+                )
             }
             // POST /users/order-create
             (&Post, Some(Route::OrderCreateForUser)) => serialize_future(
@@ -182,6 +245,19 @@ impl<
             (&Get, Some(Route::TemplateOrderCreateForUser)) => {
                 serialize_future(mail_service.get_template_by_name("user_order_create".to_string()))
             }
+            // PUT /users/template-order-create
+            (&Put, Some(Route::TemplateOrderCreateForUser)) => {
+                debug!("User with id = '{:?}' is requesting // PUT /users/template-order-create", user_id);
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body  // PUT /users/template-order-create in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| mail_service.update_template("user_order_create".to_string(), update_template)),
+                )
+            }
             // POST /users/apply-email-verification
             (&Post, Some(Route::ApplyEmailVerificationForUser)) => serialize_future(
                 parse_body::<ApplyEmailVerificationForUser>(req.body())
@@ -195,6 +271,24 @@ impl<
             // GET /users/template-apply-email-verification
             (&Get, Some(Route::TemplateApplyEmailVerificationForUser)) => {
                 serialize_future(mail_service.get_template_by_name("user_email_verification_apply".to_string()))
+            }
+            // PUT /users/template-apply-email-verification
+            (&Put, Some(Route::TemplateApplyEmailVerificationForUser)) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // PUT /users/template-apply-email-verification",
+                    user_id
+                );
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body  // PUT /users/template-apply-email-verification in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| {
+                            mail_service.update_template("user_email_verification_apply".to_string(), update_template)
+                        }),
+                )
             }
             // POST /users/password-reset
             (&Post, Some(Route::PasswordResetForUser)) => serialize_future(
@@ -210,6 +304,22 @@ impl<
             (&Get, Some(Route::TemplatePasswordResetForUser)) => {
                 serialize_future(mail_service.get_template_by_name("user_reset_password".to_string()))
             }
+            // PUT /users/template-password-reset
+            (&Put, Some(Route::TemplatePasswordResetForUser)) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // PUT /users/template-password-reset",
+                    user_id
+                );
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /users/template-password-reset in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| mail_service.update_template("user_reset_password".to_string(), update_template)),
+                )
+            }
             // POST /users/apply-password-reset
             (&Post, Some(Route::ApplyPasswordResetForUser)) => serialize_future(
                 parse_body::<ApplyPasswordResetForUser>(req.body())
@@ -223,6 +333,24 @@ impl<
             // GET /users/template-apply-password-reset
             (&Get, Some(Route::TemplateApplyPasswordResetForUser)) => {
                 serialize_future(mail_service.get_template_by_name("user_reset_password_apply".to_string()))
+            }
+            // PUT /users/template-apply-password-reset
+            (&Put, Some(Route::TemplateApplyPasswordResetForUser)) => {
+                debug!(
+                    "User with id = '{:?}' is requesting // PUT /users/template-apply-password-reset",
+                    user_id
+                );
+                serialize_future(
+                    parse_body::<UpdateTemplate>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body // PUT /users/template-apply-password-reset in UpdateTemplate failed!")
+                                .context(Error::Parse)
+                                .into()
+                        })
+                        .and_then(move |update_template| {
+                            mail_service.update_template("user_reset_password_apply".to_string(), update_template)
+                        }),
+                )
             }
             // GET /user_role/<user_id>
             (&Get, Some(Route::UserRole(user_id_arg))) => {

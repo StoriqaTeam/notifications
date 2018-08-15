@@ -29,6 +29,7 @@ use config;
 use errors::Error;
 use models::*;
 use repos::repo_factory::*;
+use repos::templates::TemplateVariant;
 use services::mail::{MailService, SendGridServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};
 
@@ -124,7 +125,7 @@ impl<
             ),
             // GET /users/template-order-update-state
             (&Get, Some(Route::TemplateOrderUpdateStateForUser)) => {
-                serialize_future(mail_service.get_template_by_name("user_order_update".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::OrderUpdateStateForUser))
             }
             // PUT /users/template-order-update-state
             (&Put, Some(Route::TemplateOrderUpdateStateForUser)) => {
@@ -139,7 +140,9 @@ impl<
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| mail_service.update_template("user_order_update".to_string(), update_template)),
+                        .and_then(move |update_template| {
+                            mail_service.update_template(TemplateVariant::OrderUpdateStateForUser, update_template)
+                        }),
                 )
             }
             // POST /stores/order-update-state
@@ -154,7 +157,7 @@ impl<
             ),
             // GET /stores/template-order-update-state
             (&Get, Some(Route::TemplateOrderUpdateStateForStore)) => {
-                serialize_future(mail_service.get_template_by_name("store_order_update".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::OrderUpdateStateForStore))
             }
             // PUT /stores/template-order-update-state
             (&Put, Some(Route::TemplateOrderUpdateStateForStore)) => {
@@ -169,7 +172,9 @@ impl<
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| mail_service.update_template("store_order_update".to_string(), update_template)),
+                        .and_then(move |update_template| {
+                            mail_service.update_template(TemplateVariant::OrderUpdateStateForStore, update_template)
+                        }),
                 )
             }
             // POST /users/email-verification
@@ -184,7 +189,7 @@ impl<
             ),
             // GET /users/template-email-verification
             (&Get, Some(Route::TemplateEmailVerificationForUser)) => {
-                serialize_future(mail_service.get_template_by_name("user_email_verification".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::EmailVerificationForUser))
             }
             // PUT /users/template-email-verification
             (&Put, Some(Route::TemplateEmailVerificationForUser)) => {
@@ -200,7 +205,7 @@ impl<
                                 .into()
                         })
                         .and_then(move |update_template| {
-                            mail_service.update_template("user_email_verification".to_string(), update_template)
+                            mail_service.update_template(TemplateVariant::EmailVerificationForUser, update_template)
                         }),
                 )
             }
@@ -216,7 +221,7 @@ impl<
             ),
             // GET /stores/template-order-create
             (&Get, Some(Route::TemplateOrderCreateForStore)) => {
-                serialize_future(mail_service.get_template_by_name("store_order_create".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::OrderCreateForStore))
             }
             // PUT /stores/template-order-create
             (&Put, Some(Route::TemplateOrderCreateForStore)) => {
@@ -228,7 +233,9 @@ impl<
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| mail_service.update_template("store_order_create".to_string(), update_template)),
+                        .and_then(move |update_template| {
+                            mail_service.update_template(TemplateVariant::OrderCreateForStore, update_template)
+                        }),
                 )
             }
             // POST /users/order-create
@@ -243,7 +250,7 @@ impl<
             ),
             // GET /users/template-order-create
             (&Get, Some(Route::TemplateOrderCreateForUser)) => {
-                serialize_future(mail_service.get_template_by_name("user_order_create".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::OrderCreateForUser))
             }
             // PUT /users/template-order-create
             (&Put, Some(Route::TemplateOrderCreateForUser)) => {
@@ -255,7 +262,9 @@ impl<
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| mail_service.update_template("user_order_create".to_string(), update_template)),
+                        .and_then(move |update_template| {
+                            mail_service.update_template(TemplateVariant::OrderCreateForUser, update_template)
+                        }),
                 )
             }
             // POST /users/apply-email-verification
@@ -270,7 +279,7 @@ impl<
             ),
             // GET /users/template-apply-email-verification
             (&Get, Some(Route::TemplateApplyEmailVerificationForUser)) => {
-                serialize_future(mail_service.get_template_by_name("user_email_verification_apply".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::ApplyEmailVerificationForUser))
             }
             // PUT /users/template-apply-email-verification
             (&Put, Some(Route::TemplateApplyEmailVerificationForUser)) => {
@@ -286,7 +295,7 @@ impl<
                                 .into()
                         })
                         .and_then(move |update_template| {
-                            mail_service.update_template("user_email_verification_apply".to_string(), update_template)
+                            mail_service.update_template(TemplateVariant::ApplyEmailVerificationForUser, update_template)
                         }),
                 )
             }
@@ -302,14 +311,11 @@ impl<
             ),
             // GET /users/template-password-reset
             (&Get, Some(Route::TemplatePasswordResetForUser)) => {
-                serialize_future(mail_service.get_template_by_name("user_reset_password".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::PasswordResetForUser))
             }
             // PUT /users/template-password-reset
             (&Put, Some(Route::TemplatePasswordResetForUser)) => {
-                debug!(
-                    "User with id = '{:?}' is requesting // PUT /users/template-password-reset",
-                    user_id
-                );
+                debug!("User with id = '{:?}' is requesting // PUT /users/template-password-reset", user_id);
                 serialize_future(
                     parse_body::<UpdateTemplate>(req.body())
                         .map_err(|e| {
@@ -317,7 +323,9 @@ impl<
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| mail_service.update_template("user_reset_password".to_string(), update_template)),
+                        .and_then(move |update_template| {
+                            mail_service.update_template(TemplateVariant::PasswordResetForUser, update_template)
+                        }),
                 )
             }
             // POST /users/apply-password-reset
@@ -332,7 +340,7 @@ impl<
             ),
             // GET /users/template-apply-password-reset
             (&Get, Some(Route::TemplateApplyPasswordResetForUser)) => {
-                serialize_future(mail_service.get_template_by_name("user_reset_password_apply".to_string()))
+                serialize_future(mail_service.get_template_by_name(TemplateVariant::ApplyPasswordResetForUser))
             }
             // PUT /users/template-apply-password-reset
             (&Put, Some(Route::TemplateApplyPasswordResetForUser)) => {
@@ -348,7 +356,7 @@ impl<
                                 .into()
                         })
                         .and_then(move |update_template| {
-                            mail_service.update_template("user_reset_password_apply".to_string(), update_template)
+                            mail_service.update_template(TemplateVariant::ApplyPasswordResetForUser, update_template)
                         }),
                 )
             }

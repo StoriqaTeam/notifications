@@ -18,6 +18,8 @@ use models::{NewTemplate, OldTemplate, Template, UpdateTemplate};
 use repos::legacy_acl::*;
 use stq_types::UserId;
 
+use std::fmt;
+
 use schema::templates::dsl::*;
 
 /// Templates repository for handling Templates
@@ -99,5 +101,32 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 {
     fn is_in_scope(&self, _user_id_arg: UserId, _scope: &Scope, _obj: Option<&Template>) -> bool {
         false
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TemplateVariant {
+    OrderUpdateStateForUser,
+    OrderUpdateStateForStore,
+    OrderCreateForUser,
+    OrderCreateForStore,
+    EmailVerificationForUser,
+    PasswordResetForUser,
+    ApplyPasswordResetForUser,
+    ApplyEmailVerificationForUser,
+}
+
+impl fmt::Display for TemplateVariant {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            TemplateVariant::OrderUpdateStateForUser => write!(f, "user_order_update"),
+            TemplateVariant::OrderUpdateStateForStore => write!(f, "store_order_update"),
+            TemplateVariant::OrderCreateForUser => write!(f, "user_order_create"),
+            TemplateVariant::OrderCreateForStore => write!(f, "store_order_create"),
+            TemplateVariant::EmailVerificationForUser => write!(f, "user_email_verification"),
+            TemplateVariant::PasswordResetForUser => write!(f, "user_reset_password"),
+            TemplateVariant::ApplyPasswordResetForUser => write!(f, "user_reset_password_apply"),
+            TemplateVariant::ApplyEmailVerificationForUser => write!(f, "user_email_verification_apply"),
+        }
     }
 }

@@ -9,12 +9,11 @@ use diesel::query_dsl::LoadQuery;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
-use failure::Fail;
 
 use super::acl;
 use super::types::RepoResult;
 use models::authorization::*;
-use models::{NewTemplate, OldTemplate, Template, UpdateTemplate};
+use models::{Template, UpdateTemplate};
 use repos::legacy_acl::*;
 use stq_types::UserId;
 
@@ -27,14 +26,8 @@ pub trait TemplatesRepo {
     /// Get template by name
     fn get_template_by_name(&self, template: String) -> RepoResult<Template>;
 
-    /// Create a new template
-    fn create(&self, payload: NewTemplate) -> RepoResult<Template>;
-
     /// Update template
     fn update(&self, temlate_name: String, payload: UpdateTemplate) -> RepoResult<Template>;
-
-    /// Delete template
-    fn delete(&self, payload: OldTemplate) -> RepoResult<Template>;
 }
 
 /// Implementation of Templates trait
@@ -61,14 +54,6 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Getting template with name {} failed.", template_name)).into())
     }
 
-    fn create(&self, payload: NewTemplate) -> RepoResult<Template> {
-        debug!("create new template {:?}.", payload);
-        let query = diesel::insert_into(templates).values(&payload);
-        query
-            .get_result(self.db_conn)
-            .map_err(|e| e.context(format!("create new template {:?}.", payload)).into())
-    }
-
     fn update(&self, template_name: String, payload: UpdateTemplate) -> RepoResult<Template> {
         debug!("Updating template with name {} and payload {:?}.", template_name, payload);
         self.execute_query(templates.filter(name.eq(template_name.clone())))
@@ -84,15 +69,6 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                     template_name, payload
                 )).into()
             })
-    }
-
-    fn delete(&self, payload: OldTemplate) -> RepoResult<Template> {
-        debug!("delete template {:?}.", payload);
-        let filtered = templates.filter(name.eq(payload.name.clone()));
-        let query = diesel::delete(filtered);
-        query
-            .get_result(self.db_conn)
-            .map_err(move |e| e.context(format!("delete template {:?}.", payload)).into())
     }
 }
 

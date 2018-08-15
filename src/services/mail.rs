@@ -21,7 +21,7 @@ use r2d2::{ManageConnection, Pool};
 use super::types::ServiceFuture;
 use config::SendGridConf;
 use errors::Error;
-use models::{SendGridPayload, Template, UpdateTemplate};
+use models::{SendGridPayload};
 use repos::{ReposFactory, TemplateVariant};
 
 pub trait MailService {
@@ -43,10 +43,6 @@ pub trait MailService {
     fn password_reset(self, mail: PasswordResetForUser) -> ServiceFuture<()>;
     /// Send Apply Password Reset For User
     fn apply_password_reset(self, mail: ApplyPasswordResetForUser) -> ServiceFuture<()>;
-    /// Get template by name
-    fn get_template_by_name(self, template_name: TemplateVariant) -> ServiceFuture<String>;
-    // Update template by name
-    fn update_template(self, template_name: TemplateVariant, payload: UpdateTemplate) -> ServiceFuture<Template>;
 }
 
 /// SendGrid service implementation
@@ -247,54 +243,6 @@ where
             cpu_pool
                 .spawn_fn(move || self.send_email_with_template(TemplateVariant::ApplyPasswordResetForUser, mail))
                 .map_err(|e: FailureError| e.context("Mail service, apply_password_reset endpoint error occured.").into()),
-        )
-    }
-
-    fn get_template_by_name(self, template_name: TemplateVariant) -> ServiceFuture<String> {
-        let db_pool = self.db_pool.clone();
-        let repo_factory = self.repo_factory.clone();
-        let user_id = self.user_id;
-
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
-                            templates_repo
-                                .get_template_by_name(template_name.to_string())
-                                .map(|template| template.data)
-                                .map_err(|e| e.context(format!("Get template by name {} error occured", template_name)).into())
-                        })
-                })
-                .map_err(|e: FailureError| {
-                    e.context("Service MailService, get_template_by_name endpoint error occured.")
-                        .into()
-                }),
-        )
-    }
-
-    fn update_template(self, template_name: TemplateVariant, payload: UpdateTemplate) -> ServiceFuture<Template> {
-        let db_pool = self.db_pool.clone();
-        let repo_factory = self.repo_factory.clone();
-        let user_id = self.user_id;
-
-        Box::new(
-            self.cpu_pool
-                .spawn_fn(move || {
-                    db_pool
-                        .get()
-                        .map_err(|e| e.context(Error::Connection).into())
-                        .and_then(move |conn| {
-                            let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
-                            templates_repo
-                                .update(template_name.to_string(), payload)
-                                .map_err(|e| e.context(format!("Update template {} error occured", template_name)).into())
-                        })
-                })
-                .map_err(|e: FailureError| e.context("Service MailService, update_template endpoint error occured.").into()),
         )
     }
 }

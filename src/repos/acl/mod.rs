@@ -77,7 +77,6 @@ impl<T> Acl<Resource, Action, Scope, FailureError, T> for ApplicationAcl {
             .flat_map(|role| hashed_acls.get(role).unwrap_or(&empty))
             .filter(|permission| (permission.resource == resource) && ((permission.action == action) || (permission.action == Action::All)))
             .filter(|permission| scope_checker.is_in_scope(*user_id, &permission.scope, obj));
-
         if acls.count() > 0 {
             Ok(true)
         } else {
@@ -94,20 +93,12 @@ pub struct UnauthorizedAcl;
 impl<T> Acl<Resource, Action, Scope, FailureError, T> for UnauthorizedAcl {
     fn allows(
         &self,
-        resource: Resource,
-        action: Action,
+        _resource: Resource,
+        _action: Action,
         _scope_checker: &CheckScope<Scope, T>,
         _obj: Option<&T>,
     ) -> Result<bool, FailureError> {
-        if action == Action::Read {
-            match resource {
-                Resource::Templates => Ok(true),
-                _ => Ok(false),
-            }
-        } else {
-            error!("Denied unauthorized request to do {} on {}.", action, resource);
-            Ok(false)
-        }
+        Ok(false)
     }
 }
 

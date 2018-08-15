@@ -57,7 +57,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     fn get_template_by_name(&self, template_name: String) -> RepoResult<Template> {
         debug!("get template by name {}.", template_name);
         self.execute_query(templates.filter(name.eq(template_name.clone())))
-            .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Update, self, Some(&template)).map(|_| template))
+            .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Read, self, Some(&template)).map(|_| template))
             .map_err(|e: FailureError| e.context(format!("Getting template with name {} failed.", template_name)).into())
     }
 
@@ -99,8 +99,11 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> CheckScope<Scope, Template>
     for TemplatesRepoImpl<'a, T>
 {
-    fn is_in_scope(&self, _user_id_arg: UserId, _scope: &Scope, _obj: Option<&Template>) -> bool {
-        false
+    fn is_in_scope(&self, _user_id: UserId, scope: &Scope, _obj: Option<&Template>) -> bool {
+        match *scope {
+            Scope::All => true,
+            Scope::Owned => false,
+        }
     }
 }
 

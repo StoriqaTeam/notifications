@@ -124,7 +124,7 @@ impl<
             ),
             // GET /users/template-order-update-state
             (&Get, Some(Route::TemplateOrderUpdateStateForUser)) => {
-                serialize_future(serialize_future(mail_service.get_template_by_name("user_order_update".to_string())))
+                serialize_future(mail_service.get_template_by_name("user_order_update".to_string()))
             }
             // POST /stores/order-update-state
             (&Post, Some(Route::OrderUpdateStateForStore)) => serialize_future(
@@ -136,6 +136,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.order_update_store(mail)),
             ),
+            // GET /stores/template-order-update-state
+            (&Get, Some(Route::TemplateOrderUpdateStateForStore)) => {
+                serialize_future(mail_service.get_template_by_name("store_order_update".to_string()))
+            }
             // POST /users/email-verification
             (&Post, Some(Route::EmailVerificationForUser)) => serialize_future(
                 parse_body::<EmailVerificationForUser>(req.body())
@@ -146,6 +150,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.email_verification(mail)),
             ),
+            // GET /users/template-email-verification
+            (&Get, Some(Route::TemplateEmailVerificationForUser)) => {
+                serialize_future(mail_service.get_template_by_name("user_email_verification".to_string()))
+            }
             // POST /stores/order-create
             (&Post, Some(Route::OrderCreateForStore)) => serialize_future(
                 parse_body::<OrderCreateForStore>(req.body())
@@ -156,6 +164,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.order_create_store(mail)),
             ),
+            // GET /stores/template-order-create
+            (&Get, Some(Route::TemplateOrderCreateForStore)) => {
+                serialize_future(mail_service.get_template_by_name("store_order_create".to_string()))
+            }
             // POST /users/order-create
             (&Post, Some(Route::OrderCreateForUser)) => serialize_future(
                 parse_body::<OrderCreateForUser>(req.body())
@@ -166,6 +178,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.order_create_user(mail)),
             ),
+            // GET /users/template-order-create
+            (&Get, Some(Route::TemplateOrderCreateForUser)) => {
+                serialize_future(mail_service.get_template_by_name("user_order_create".to_string()))
+            }
             // POST /users/apply-email-verification
             (&Post, Some(Route::ApplyEmailVerificationForUser)) => serialize_future(
                 parse_body::<ApplyEmailVerificationForUser>(req.body())
@@ -176,6 +192,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.apply_email_verification(mail)),
             ),
+            // GET /users/template-apply-email-verification
+            (&Get, Some(Route::TemplateApplyEmailVerificationForUser)) => {
+                serialize_future(mail_service.get_template_by_name("user_email_verification_apply".to_string()))
+            }
             // POST /users/password-reset
             (&Post, Some(Route::PasswordResetForUser)) => serialize_future(
                 parse_body::<PasswordResetForUser>(req.body())
@@ -186,6 +206,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.password_reset(mail)),
             ),
+            // GET /users/template-password-reset
+            (&Get, Some(Route::TemplatePasswordResetForUser)) => {
+                serialize_future(mail_service.get_template_by_name("user_reset_password".to_string()))
+            }
             // POST /users/apply-password-reset
             (&Post, Some(Route::ApplyPasswordResetForUser)) => serialize_future(
                 parse_body::<ApplyPasswordResetForUser>(req.body())
@@ -196,6 +220,10 @@ impl<
                     })
                     .and_then(move |mail| mail_service.apply_password_reset(mail)),
             ),
+            // GET /users/template-apply-password-reset
+            (&Get, Some(Route::TemplateApplyPasswordResetForUser)) => {
+                serialize_future(mail_service.get_template_by_name("user_reset_password_apply".to_string()))
+            }
             // GET /user_role/<user_id>
             (&Get, Some(Route::UserRole(user_id_arg))) => {
                 debug!("User with id = '{:?}' is requesting  // GET /user_role/{}", user_id, user_id_arg);

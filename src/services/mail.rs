@@ -21,7 +21,7 @@ use r2d2::{ManageConnection, Pool};
 use super::types::ServiceFuture;
 use config::SendGridConf;
 use errors::Error;
-use models::{SendGridPayload};
+use models::SendGridPayload;
 use repos::{ReposFactory, TemplateVariant};
 
 pub trait MailService {

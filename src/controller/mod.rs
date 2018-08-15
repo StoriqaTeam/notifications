@@ -18,8 +18,8 @@ use r2d2::{ManageConnection, Pool};
 use stq_http::client::ClientHandle;
 use stq_http::controller::Controller;
 use stq_http::controller::ControllerFuture;
-use stq_http::request_util::parse_body;
 use stq_http::request_util::serialize_future;
+use stq_http::request_util::{parse_body, read_body};
 use stq_router::RouteParser;
 use stq_static_resources::*;
 use stq_types::*;
@@ -153,13 +153,17 @@ impl<
                     user_id
                 );
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body // PUT /users/template-order-update-state in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
+                        .and_then(move |text| {
+                            let update_template = UpdateTemplate {
+                                name: TemplateVariant::OrderUpdateStateForUser.to_string(),
+                                data: text,
+                            };
                             templates_service.update_template(TemplateVariant::OrderUpdateStateForUser, update_template)
                         }),
                 )

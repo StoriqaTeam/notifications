@@ -19,7 +19,7 @@ pub struct Config {
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
     pub host: String,
-    pub port: String,
+    pub port: i32,
     pub database: String,
     pub thread_count: usize,
 }

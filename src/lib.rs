@@ -63,7 +63,7 @@ use repos::acl::RolesCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
 
 /// Starts new web service from provided `Config`
-pub fn start_server(config: config::Config) {
+pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option<i32>, callback: F) {
     let thread_count = config.server.thread_count;
     let cpu_pool = CpuPool::new(thread_count);
     // Prepare reactor
@@ -77,7 +77,8 @@ pub fn start_server(config: config::Config) {
 
     // Prepare server
     let address = {
-        format!("{}:{}", config.server.host, config.server.port)
+        let port = port.as_ref().unwrap_or(&config.server.port);
+        format!("{}:{}", config.server.host, port)
             .parse()
             .expect("Could not parse address")
     };
@@ -132,5 +133,9 @@ pub fn start_server(config: config::Config) {
     );
 
     info!("Listening on http://{}, threads: {}", address, thread_count);
+    handle.spawn_fn(move || {
+        callback();
+        future::ok(())
+    });
     core.run(future::empty::<(), ()>()).unwrap();
 }

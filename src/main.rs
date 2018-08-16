@@ -10,5 +10,5 @@ fn main() {
     // Prepare logger
     stq_logging::init(config.graylog.as_ref());
 
-    notifications_lib::start_server(config);
+    notifications_lib::start_server(config, &None, || ());
 }

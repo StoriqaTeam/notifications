@@ -73,7 +73,7 @@ where
                         .and_then(move |conn| {
                             let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
                             templates_repo
-                                .get_template_by_name(template_name.to_string())
+                                .get_template_by_name(template_name)
                                 .map(|template| template.data)
                                 .map_err(|e| e.context(format!("Get template by name {} error occured", template_name)).into())
                         })
@@ -90,7 +90,7 @@ where
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
         let payload = UpdateTemplate {
-            name: template_name.to_string(),
+            name: template_name,
             data: text,
         };
         Box::new(
@@ -102,7 +102,7 @@ where
                         .and_then(move |conn| {
                             let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
                             templates_repo
-                                .update(template_name.to_string(), payload)
+                                .update(template_name, payload)
                                 .map_err(|e| e.context(format!("Update template {} error occured", template_name)).into())
                         })
                 })

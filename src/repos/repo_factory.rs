@@ -155,15 +155,15 @@ pub mod tests {
     pub struct TemplatesRepoMock;
 
     impl TemplatesRepo for TemplatesRepoMock {
-        fn get_template_by_name(&self, template: String) -> RepoResult<Template> {
+        fn get_template_by_name(&self, template_name: TemplateVariant) -> RepoResult<Template> {
             Ok(Template {
                 id: 1,
-                name: "mock_template".to_owned(),
+                name: template_name,
                 data: "<html></html>".to_owned(),
             })
         }
 
-        fn update(&self, template_name: String, payload: UpdateTemplate) -> RepoResult<Template> {
+        fn update(&self, template_name: TemplateVariant, payload: UpdateTemplate) -> RepoResult<Template> {
             Ok(Template {
                 id: 1,
                 name: payload.name,

@@ -107,7 +107,7 @@ where
                         .and_then(move |conn| {
                             let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
                             templates_repo
-                                .get_template_by_name(template_name.to_string())
+                                .get_template_by_name(template_name)
                                 .and_then({
                                     let mail = mail.clone();
                                     move |template| {

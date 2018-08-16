@@ -3,7 +3,7 @@ DELETE FROM templates;
 ALTER SEQUENCE templates_id_seq RESTART WITH 1;
 
 INSERT INTO templates(name, data ) VALUES
-('store_order_create', '<html>
+('order_create_for_store', '<html>
   <head>
     <title>New order {{order_slug}}</title>
   </head>
@@ -22,7 +22,7 @@ INSERT INTO templates(name, data ) VALUES
 
   </body>
 </html>'),
-('store_order_update', '<html>
+('order_update_state_for_store', '<html>
   <head>
     <title>The order {{order_slug}} status</title>
   </head>
@@ -42,7 +42,7 @@ INSERT INTO templates(name, data ) VALUES
   </body>
 </html>
 '),
-('user_email_verification_apply', '<html>
+('apply_email_verification_for_user', '<html>
   <head>
     <title>Successful registration on Storiqa</title>
   </head>
@@ -62,7 +62,7 @@ INSERT INTO templates(name, data ) VALUES
   </body>
 </html>
 '),
-('user_email_verification', '<html>
+('email_verification_for_user', '<html>
   <head>
     <title>Verify your account on Storiqa</title>
   </head>
@@ -87,7 +87,7 @@ INSERT INTO templates(name, data ) VALUES
   </body>
 </html>
 '),
-('user_order_create', '<html>
+('order_create_for_user', '<html>
   <head>
     <title>New order {{order_slug}}</title>
   </head>
@@ -109,7 +109,7 @@ INSERT INTO templates(name, data ) VALUES
   </body>
 </html>
 '),
-('user_order_update', '<html>
+('order_update_state_for_user', '<html>
   <head>
     <title>The order {{order_slug}} status</title>
   </head>
@@ -131,7 +131,7 @@ INSERT INTO templates(name, data ) VALUES
   </body>
 </html>
 '),
-('user_reset_password_apply', '<html>
+('apply_password_reset_for_user', '<html>
   <head>
     <title>Successful password reset on Storiqa</title>
   </head>
@@ -152,7 +152,7 @@ INSERT INTO templates(name, data ) VALUES
   </body>
 </html>
 '),
-('user_reset_password', '<html>
+('password_reset_for_user', '<html>
   <head>
     <title>Password reset on Storiqa</title>
   </head>

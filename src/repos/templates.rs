@@ -24,10 +24,10 @@ use schema::templates::dsl::*;
 /// Templates repository for handling Templates
 pub trait TemplatesRepo {
     /// Get template by name
-    fn get_template_by_name(&self, template: String) -> RepoResult<Template>;
+    fn get_template_by_name(&self, template: TemplateVariant) -> RepoResult<Template>;
 
     /// Update template
-    fn update(&self, temlate_name: String, payload: UpdateTemplate) -> RepoResult<Template>;
+    fn update(&self, temlate_name: TemplateVariant, payload: UpdateTemplate) -> RepoResult<Template>;
 }
 
 /// Implementation of Templates trait
@@ -47,14 +47,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> TemplatesRepo for TemplatesRepoImpl<'a, T> {
-    fn get_template_by_name(&self, template_name: String) -> RepoResult<Template> {
+    fn get_template_by_name(&self, template_name: TemplateVariant) -> RepoResult<Template> {
         debug!("get template by name {}.", template_name);
         self.execute_query(templates.filter(name.eq(template_name.clone())))
             .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Read, self, Some(&template)).map(|_| template))
             .map_err(|e: FailureError| e.context(format!("Getting template with name {} failed.", template_name)).into())
     }
 
-    fn update(&self, template_name: String, payload: UpdateTemplate) -> RepoResult<Template> {
+    fn update(&self, template_name: TemplateVariant, payload: UpdateTemplate) -> RepoResult<Template> {
         debug!("Updating template with name {} and payload {:?}.", template_name, payload);
         self.execute_query(templates.filter(name.eq(template_name.clone())))
             .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Update, self, Some(&template)))
@@ -83,7 +83,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Debug, DieselTypes)]
 pub enum TemplateVariant {
     OrderUpdateStateForUser,
     OrderUpdateStateForStore,
@@ -98,14 +98,14 @@ pub enum TemplateVariant {
 impl fmt::Display for TemplateVariant {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            TemplateVariant::OrderUpdateStateForUser => write!(f, "user_order_update"),
-            TemplateVariant::OrderUpdateStateForStore => write!(f, "store_order_update"),
-            TemplateVariant::OrderCreateForUser => write!(f, "user_order_create"),
-            TemplateVariant::OrderCreateForStore => write!(f, "store_order_create"),
-            TemplateVariant::EmailVerificationForUser => write!(f, "user_email_verification"),
-            TemplateVariant::PasswordResetForUser => write!(f, "user_reset_password"),
-            TemplateVariant::ApplyPasswordResetForUser => write!(f, "user_reset_password_apply"),
-            TemplateVariant::ApplyEmailVerificationForUser => write!(f, "user_email_verification_apply"),
+            TemplateVariant::OrderUpdateStateForUser => write!(f, "order_update_state_for_user"),
+            TemplateVariant::OrderUpdateStateForStore => write!(f, "order_update_state_for_store"),
+            TemplateVariant::OrderCreateForUser => write!(f, "order_create_for_user"),
+            TemplateVariant::OrderCreateForStore => write!(f, "order_create_for_store"),
+            TemplateVariant::EmailVerificationForUser => write!(f, "email_verification_for_user"),
+            TemplateVariant::PasswordResetForUser => write!(f, "password_reset_for_user"),
+            TemplateVariant::ApplyPasswordResetForUser => write!(f, "apply_password_reset_for_user"),
+            TemplateVariant::ApplyEmailVerificationForUser => write!(f, "apply_email_verification_for_user"),
         }
     }
 }

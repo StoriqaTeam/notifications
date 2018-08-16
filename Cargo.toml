@@ -39,6 +39,7 @@ stq_router = { path = "vendor/libstqbackend/router" }
 stq_logging = { path = "vendor/libstqbackend/logging" }
 stq_static_resources = { path = "vendor/libstqbackend/static_resources" }
 stq_types = { path = "vendor/libstqbackend/types" }
+stq_diesel_macro_derive = { path = "vendor/libstqbackend/diesel_macro_derive"}
 uuid = { version = "*", features = ["use_std", "v4", "serde"] }
 native-tls = "0.1"
 handlebars = "1.0.0"

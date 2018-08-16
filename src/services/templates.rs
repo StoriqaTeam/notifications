@@ -13,7 +13,7 @@ use r2d2::{ManageConnection, Pool};
 
 use super::types::ServiceFuture;
 use errors::Error;
-use models::{Template, UpdateTemplate};
+use models::Template;
 use repos::{ReposFactory, TemplateVariant};
 
 pub trait TemplatesService {
@@ -89,10 +89,7 @@ where
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
-        let payload = UpdateTemplate {
-            name: template_name,
-            data: text,
-        };
+
         Box::new(
             self.cpu_pool
                 .spawn_fn(move || {
@@ -102,7 +99,7 @@ where
                         .and_then(move |conn| {
                             let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
                             templates_repo
-                                .update(template_name, payload)
+                                .update(template_name, text)
                                 .map_err(|e| e.context(format!("Update template {} error occured", template_name)).into())
                         })
                 })

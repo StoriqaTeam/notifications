@@ -163,11 +163,11 @@ pub mod tests {
             })
         }
 
-        fn update(&self, template_name: TemplateVariant, payload: UpdateTemplate) -> RepoResult<Template> {
+        fn update(&self, template_name: TemplateVariant, payload: String) -> RepoResult<Template> {
             Ok(Template {
                 id: 1,
-                name: payload.name,
-                data: payload.data,
+                name: template_name,
+                data: payload,
             })
         }
     }

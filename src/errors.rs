@@ -22,8 +22,7 @@ impl Codeable for Error {
         match *self {
             Error::NotFound => StatusCode::NotFound,
             Error::Parse => StatusCode::UnprocessableEntity,
-            Error::HttpClient => StatusCode::InternalServerError,
-            Error::Connection => StatusCode::InternalServerError,
+            Error::HttpClient | Error::Connection => StatusCode::InternalServerError,
             Error::Forbidden => StatusCode::Forbidden,
         }
     }

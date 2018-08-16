@@ -13,7 +13,7 @@ use failure::Error as FailureError;
 use super::acl;
 use super::types::RepoResult;
 use models::authorization::*;
-use models::{Template, UpdateTemplate};
+use models::Template;
 use repos::legacy_acl::*;
 use stq_types::UserId;
 
@@ -27,7 +27,7 @@ pub trait TemplatesRepo {
     fn get_template_by_name(&self, template: TemplateVariant) -> RepoResult<Template>;
 
     /// Update template
-    fn update(&self, temlate_name: TemplateVariant, payload: UpdateTemplate) -> RepoResult<Template>;
+    fn update(&self, temlate_name: TemplateVariant, payload: String) -> RepoResult<Template>;
 }
 
 /// Implementation of Templates trait
@@ -54,13 +54,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             .map_err(|e: FailureError| e.context(format!("Getting template with name {} failed.", template_name)).into())
     }
 
-    fn update(&self, template_name: TemplateVariant, payload: UpdateTemplate) -> RepoResult<Template> {
+    fn update(&self, template_name: TemplateVariant, payload: String) -> RepoResult<Template> {
         debug!("Updating template with name {} and payload {:?}.", template_name, payload);
         self.execute_query(templates.filter(name.eq(template_name.clone())))
             .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Update, self, Some(&template)))
             .and_then(|_| {
                 let filter = templates.filter(name.eq(template_name.clone()));
-                let query = diesel::update(filter).set(&payload);
+                let query = diesel::update(filter).set(data.eq(&payload));
                 query.get_result(self.db_conn).map_err(From::from)
             })
             .map_err(|e: FailureError| {

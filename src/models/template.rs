@@ -3,7 +3,7 @@
 use repos::TemplateVariant;
 use schema::templates;
 
-#[derive(Serialize, Queryable, Insertable, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Queryable, Insertable, Debug)]
 #[table_name = "templates"]
 pub struct Template {
     pub id: i32,

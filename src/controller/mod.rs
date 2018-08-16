@@ -159,13 +159,7 @@ impl<
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |text| {
-                            let update_template = UpdateTemplate {
-                                name: TemplateVariant::OrderUpdateStateForUser.to_string(),
-                                data: text,
-                            };
-                            templates_service.update_template(TemplateVariant::OrderUpdateStateForUser, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::OrderUpdateStateForUser, text)),
                 )
             }
             // POST /stores/order-update-state
@@ -196,15 +190,13 @@ impl<
                     user_id
                 );
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body // PUT /stores/template-order-update-state in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
-                            templates_service.update_template(TemplateVariant::OrderUpdateStateForStore, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::OrderUpdateStateForStore, text)),
                 )
             }
             // POST /users/email-verification
@@ -235,15 +227,13 @@ impl<
                     user_id
                 );
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body // PUT /users/template-email-verification in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
-                            templates_service.update_template(TemplateVariant::EmailVerificationForUser, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::EmailVerificationForUser, text)),
                 )
             }
             // POST /stores/order-create
@@ -268,15 +258,13 @@ impl<
             (&Put, Some(Route::TemplateOrderCreateForStore)) => {
                 debug!("User with id = '{:?}' is requesting // PUT /stores/template-order-create", user_id);
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body // PUT /stores/template-order-create in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
-                            templates_service.update_template(TemplateVariant::OrderCreateForStore, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::OrderCreateForStore, text)),
                 )
             }
             // POST /users/order-create
@@ -301,15 +289,13 @@ impl<
             (&Put, Some(Route::TemplateOrderCreateForUser)) => {
                 debug!("User with id = '{:?}' is requesting // PUT /users/template-order-create", user_id);
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body  // PUT /users/template-order-create in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
-                            templates_service.update_template(TemplateVariant::OrderCreateForUser, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::OrderCreateForUser, text)),
                 )
             }
             // POST /users/apply-email-verification
@@ -343,15 +329,13 @@ impl<
                     user_id
                 );
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body  // PUT /users/template-apply-email-verification in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
-                            templates_service.update_template(TemplateVariant::ApplyEmailVerificationForUser, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::ApplyEmailVerificationForUser, text)),
                 )
             }
             // POST /users/password-reset
@@ -376,15 +360,13 @@ impl<
             (&Put, Some(Route::TemplatePasswordResetForUser)) => {
                 debug!("User with id = '{:?}' is requesting // PUT /users/template-password-reset", user_id);
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body // PUT /users/template-password-reset in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
-                            templates_service.update_template(TemplateVariant::PasswordResetForUser, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::PasswordResetForUser, text)),
                 )
             }
             // POST /users/apply-password-reset
@@ -415,15 +397,13 @@ impl<
                     user_id
                 );
                 serialize_future(
-                    parse_body::<UpdateTemplate>(req.body())
+                    read_body(req.body())
                         .map_err(|e| {
                             e.context("Parsing body // PUT /users/template-apply-password-reset in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
                         })
-                        .and_then(move |update_template| {
-                            templates_service.update_template(TemplateVariant::ApplyPasswordResetForUser, update_template)
-                        }),
+                        .and_then(move |text| templates_service.update_template(TemplateVariant::ApplyPasswordResetForUser, text)),
                 )
             }
             // GET /user_role/<user_id>

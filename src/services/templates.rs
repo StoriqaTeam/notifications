@@ -20,7 +20,7 @@ pub trait TemplatesService {
     /// Get template by name
     fn get_template_by_name(self, template_name: TemplateVariant) -> ServiceFuture<String>;
     // Update template by name
-    fn update_template(self, template_name: TemplateVariant, payload: UpdateTemplate) -> ServiceFuture<Template>;
+    fn update_template(self, template_name: TemplateVariant, text: String) -> ServiceFuture<Template>;
 }
 
 pub struct TemplatesServiceImpl<T, M, F>
@@ -85,11 +85,14 @@ where
         )
     }
 
-    fn update_template(self, template_name: TemplateVariant, payload: UpdateTemplate) -> ServiceFuture<Template> {
+    fn update_template(self, template_name: TemplateVariant, text: String) -> ServiceFuture<Template> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
-
+        let payload = UpdateTemplate {
+            name: template_name.to_string(),
+            data: text,
+        };
         Box::new(
             self.cpu_pool
                 .spawn_fn(move || {

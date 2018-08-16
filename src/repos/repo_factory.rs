@@ -163,27 +163,11 @@ pub mod tests {
             })
         }
 
-        fn create(&self, payload: NewTemplate) -> RepoResult<Template> {
-            Ok(Template {
-                id: 1,
-                name: "mock_template".to_owned(),
-                data: "<html></html>".to_owned(),
-            })
-        }
-
         fn update(&self, template_name: String, payload: UpdateTemplate) -> RepoResult<Template> {
             Ok(Template {
                 id: 1,
                 name: payload.name,
                 data: payload.data,
-            })
-        }
-
-        fn delete(&self, payload: OldTemplate) -> RepoResult<Template> {
-            Ok(Template {
-                id: 1,
-                name: payload.name,
-                data: "<html></html>".to_owned(),
             })
         }
     }

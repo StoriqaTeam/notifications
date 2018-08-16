@@ -78,9 +78,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     // Prepare server
     let address = {
         let port = port.as_ref().unwrap_or(&config.server.port);
-        format!("{}:{}", config.server.host, port)
-            .parse()
-            .expect("Could not parse address")
+        format!("{}:{}", config.server.host, port).parse().expect("Could not parse address")
     };
 
     // Roles cache

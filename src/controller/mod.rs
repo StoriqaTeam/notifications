@@ -10,7 +10,7 @@ use failure::Fail;
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
-use hyper::header::{Authorization, Cookie};
+use hyper::header::Authorization;
 use hyper::server::Request;
 use hyper::{Delete, Get, Post, Put};
 use r2d2::{ManageConnection, Pool};
@@ -85,10 +85,7 @@ impl<
             .and_then(|id| i32::from_str(&id).ok())
             .map(UserId);
 
-        let uuid_header = headers.get::<Cookie>();
-        let uuid = uuid_header.and_then(|cookie| cookie.get("UUID"));
-
-        debug!("User with id = '{:?}' and uuid = {:?} is requesting {}", user_id, uuid, req.path());
+        debug!("User with id = '{:?}' is requesting {}", user_id, req.path());
 
         let mail_service = SendGridServiceImpl::new(
             self.cpu_pool.clone(),

@@ -113,7 +113,7 @@ where
                                     move |template| {
                                         handlebars
                                             .render_template(&template.data, &mail)
-                                            .map_err(move |e| e.context(format!("Couldn't render template {}", template.name)).into())
+                                            .map_err(move |e| e.context(format!("Couldn't render template {:?}", template.name)).into())
                                     }
                                 })
                                 .and_then(move |text| {

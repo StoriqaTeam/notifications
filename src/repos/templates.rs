@@ -17,8 +17,6 @@ use models::Template;
 use repos::legacy_acl::*;
 use stq_types::UserId;
 
-use std::fmt;
-
 use schema::templates::dsl::*;
 
 /// Templates repository for handling Templates
@@ -48,14 +46,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> TemplatesRepo for TemplatesRepoImpl<'a, T> {
     fn get_template_by_name(&self, template_name: TemplateVariant) -> RepoResult<Template> {
-        debug!("get template by name {}.", template_name);
+        debug!("get template by name {:?}.", template_name);
         self.execute_query(templates.filter(name.eq(template_name.clone())))
             .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Read, self, Some(&template)).map(|_| template))
-            .map_err(|e: FailureError| e.context(format!("Getting template with name {} failed.", template_name)).into())
+            .map_err(|e: FailureError| e.context(format!("Getting template with name {:?} failed.", template_name)).into())
     }
 
     fn update(&self, template_name: TemplateVariant, payload: String) -> RepoResult<Template> {
-        debug!("Updating template with name {} and payload {:?}.", template_name, payload);
+        debug!("Updating template with name {:?} and payload {}.", template_name, payload);
         self.execute_query(templates.filter(name.eq(template_name.clone())))
             .and_then(|template| acl::check(&*self.acl, Resource::Templates, Action::Update, self, Some(&template)))
             .and_then(|_| {
@@ -65,7 +63,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             })
             .map_err(|e: FailureError| {
                 e.context(format!(
-                    "Updating template with name {} and payload {:?} failed.",
+                    "Updating template with name {:?} and payload {} failed.",
                     template_name, payload
                 )).into()
             })
@@ -93,19 +91,4 @@ pub enum TemplateVariant {
     PasswordResetForUser,
     ApplyPasswordResetForUser,
     ApplyEmailVerificationForUser,
-}
-
-impl fmt::Display for TemplateVariant {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            TemplateVariant::OrderUpdateStateForUser => write!(f, "order_update_state_for_user"),
-            TemplateVariant::OrderUpdateStateForStore => write!(f, "order_update_state_for_store"),
-            TemplateVariant::OrderCreateForUser => write!(f, "order_create_for_user"),
-            TemplateVariant::OrderCreateForStore => write!(f, "order_create_for_store"),
-            TemplateVariant::EmailVerificationForUser => write!(f, "email_verification_for_user"),
-            TemplateVariant::PasswordResetForUser => write!(f, "password_reset_for_user"),
-            TemplateVariant::ApplyPasswordResetForUser => write!(f, "apply_password_reset_for_user"),
-            TemplateVariant::ApplyEmailVerificationForUser => write!(f, "apply_email_verification_for_user"),
-        }
-    }
 }

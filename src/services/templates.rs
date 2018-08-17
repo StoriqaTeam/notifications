@@ -75,7 +75,7 @@ where
                             templates_repo
                                 .get_template_by_name(template_name)
                                 .map(|template| template.data)
-                                .map_err(|e| e.context(format!("Get template by name {} error occured", template_name)).into())
+                                .map_err(|e| e.context(format!("Get template by name {:?} error occured", template_name)).into())
                         })
                 })
                 .map_err(|e: FailureError| {
@@ -100,7 +100,7 @@ where
                             let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
                             templates_repo
                                 .update(template_name, text)
-                                .map_err(|e| e.context(format!("Update template {} error occured", template_name)).into())
+                                .map_err(|e| e.context(format!("Update template {:?} error occured", template_name)).into())
                         })
                 })
                 .map_err(|e: FailureError| e.context("Service MailService, update_template endpoint error occured.").into()),

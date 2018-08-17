@@ -11,10 +11,8 @@ pub mod common;
 
 use hyper::Method;
 
-use lib::models::*;
-use lib::repos::TemplateVariant;
-
-use stq_http::client::ClientHandle as HttpClientHandle;
+use std::result;
+use stq_http::client::{self, ClientHandle as HttpClientHandle};
 use stq_types::*;
 use tokio_core::reactor::Core;
 
@@ -35,13 +33,19 @@ impl RpcClient {
             user,
         }
     }
+
+    fn request_template(&mut self, method: Method, request_path: String, body: Option<String>) -> result::Result<String, client::Error> {
+        self.core.run(self.http_client.request_with_auth_header::<String>(
+            method,
+            format!("{}/{}", self.base_url, request_path),
+            body,
+            Some(self.user.to_string()),
+        ))
+    }
 }
 
-#[test]
-fn test_get_template() {
-    let base_url = common::setup();
-
-    let templates = vec![
+fn init_templates_paths() -> Vec<String> {
+    vec![
         "users/template-order-update-state".to_owned(),
         "stores/template-order-update-state".to_owned(),
         "users/template-order-create".to_owned(),
@@ -50,19 +54,20 @@ fn test_get_template() {
         "users/template-apply-email-verification".to_owned(),
         "users/template-password-reset".to_owned(),
         "users/template-apply-password-reset".to_owned(),
-    ];
+    ]
+}
+
+#[test]
+fn test_get_template() {
+    let base_url = common::setup();
+
+    let templates = init_templates_paths();
 
     {
         let user_id = UserId(1);
         let mut rpc = RpcClient::new(base_url.clone(), user_id);
         for template in templates.iter() {
-            let template_result = rpc.core.run(rpc.http_client.request_with_auth_header::<String>(
-                Method::Get,
-                format!("{}/{}", rpc.base_url, template),
-                None,
-                Some(rpc.user.to_string()),
-            ));
-
+            let template_result = rpc.request_template(Method::Get, template.clone(), None);
             assert!(template_result.is_ok());
         }
     }
@@ -71,16 +76,34 @@ fn test_get_template() {
         let user_id = UserId(123);
         let mut rpc = RpcClient::new(base_url.clone(), user_id);
         for template in templates.iter() {
-            assert!(
-                rpc.core
-                    .run(rpc.http_client.request_with_auth_header::<String>(
-                        Method::Get,
-                        format!("{}/{}", rpc.base_url, template),
-                        None,
-                        Some(rpc.user.to_string()),
-                    ))
-                    .is_err()
-            );
+            let template_result = rpc.request_template(Method::Get, template.clone(), None);
+            assert!(template_result.is_err());
+        }
+    }
+}
+
+#[test]
+fn test_update_template() {
+    let base_url = common::setup();
+
+    let templates = init_templates_paths();
+    let template_mock = "<html>{{param1}}</html>".to_owned();
+
+    {
+        let user_id = UserId(1);
+        let mut rpc = RpcClient::new(base_url.clone(), user_id);
+        for template in templates.iter() {
+            let template_result = rpc.request_template(Method::Put, template.clone(), Some(template_mock.clone()));
+            assert!(template_result.is_ok());
+        }
+    }
+
+    {
+        let user_id = UserId(123);
+        let mut rpc = RpcClient::new(base_url.clone(), user_id);
+        for template in templates.iter() {
+            let template_result = rpc.request_template(Method::Put, template.clone(), Some(template_mock.clone()));
+            assert!(template_result.is_err());
         }
     }
 }

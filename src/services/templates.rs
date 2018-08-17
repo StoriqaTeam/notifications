@@ -13,14 +13,13 @@ use r2d2::{ManageConnection, Pool};
 
 use super::types::ServiceFuture;
 use errors::Error;
-use models::Template;
 use repos::{ReposFactory, TemplateVariant};
 
 pub trait TemplatesService {
     /// Get template by name
     fn get_template_by_name(self, template_name: TemplateVariant) -> ServiceFuture<String>;
     // Update template by name
-    fn update_template(self, template_name: TemplateVariant, text: String) -> ServiceFuture<Template>;
+    fn update_template(self, template_name: TemplateVariant, text: String) -> ServiceFuture<String>;
 }
 
 pub struct TemplatesServiceImpl<T, M, F>
@@ -85,7 +84,7 @@ where
         )
     }
 
-    fn update_template(self, template_name: TemplateVariant, text: String) -> ServiceFuture<Template> {
+    fn update_template(self, template_name: TemplateVariant, text: String) -> ServiceFuture<String> {
         let db_pool = self.db_pool.clone();
         let repo_factory = self.repo_factory.clone();
         let user_id = self.user_id;
@@ -100,6 +99,7 @@ where
                             let templates_repo = repo_factory.create_templates_repo(&*conn, user_id);
                             templates_repo
                                 .update(template_name, text)
+                                .map(|template| template.data)
                                 .map_err(|e| e.context(format!("Update template {:?} error occured", template_name)).into())
                         })
                 })

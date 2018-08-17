@@ -159,7 +159,7 @@ pub mod tests {
             Ok(Template {
                 id: 1,
                 name: template_name,
-                data: "<html></html>".to_owned(),
+                data: "<html></html>".to_string(),
             })
         }
 

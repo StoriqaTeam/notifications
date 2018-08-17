@@ -11,7 +11,7 @@ INSERT INTO templates(name, data ) VALUES
     <p>
       Please be informed that you have a new order {{order_slug}}. 
       <br/>
-      You can watch your order on <a href= &quot;{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}&quot;>this page</a> .
+      You can watch your order on <a href= "{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}">this page</a> .
       <br/>
       Best regards,
       Storiqa Team
@@ -30,7 +30,7 @@ INSERT INTO templates(name, data ) VALUES
     <p>
       Please be informed that the order {{order_slug}} status has changed to {{order_state}}.
       <br/>
-      You can watch your order on <a href=&quot;{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}&quot;>this page</a> .
+      You can watch your order on <a href="{{cluster_url}}/manage/store/{{store_id}}/orders/{{order_slug}}">this page</a> .
       <br/>
       Best regards,
       Storiqa Team
@@ -72,7 +72,7 @@ INSERT INTO templates(name, data ) VALUES
       <br/>
       Thank you for signing up for Storiqa! In order to finish the registration process and verify your account, please confirm your e-mail by following the link below:
       
-     <a href=&quot;{{verify_email_path}}/{{token}}&quot;>Verify my email on Storiqa.</a>
+     <a href="{{verify_email_path}}/{{token}}">Verify my email on Storiqa.</a>
       <br/>
 
       Best regards,
@@ -97,7 +97,7 @@ INSERT INTO templates(name, data ) VALUES
       <br/>
       Please be informed that you have a new order {{order_slug}}. 
       <br/>
-      You can watch your order on <a href=&quot;{{cluster_url}}/profile/orders/{{order_slug}}&quot;>this page</a>.
+      You can watch your order on <a href="{{cluster_url}}/profile/orders/{{order_slug}}">this page</a>.
       <br/>
       Best regards,
       Storiqa Team
@@ -119,7 +119,7 @@ INSERT INTO templates(name, data ) VALUES
       <br/>
       Please be informed that the order {{order_slug}} status has changed to {{order_state}}.
       <br/>
-      You can watch your order on <a href=&quot;{{cluster_url}}/profile/orders/{{order_slug}}&quot;>this page</a>.
+      You can watch your order on <a href="{{cluster_url}}/profile/orders/{{order_slug}}">this page</a>.
       <br/>
       Best regards,
       Storiqa Team
@@ -142,7 +142,7 @@ INSERT INTO templates(name, data ) VALUES
 
         Congratulations! Your password has been changed successfully!
       <br/>
-        <a href=&quot;http://storiqa.com&quot;>Let&apos;s go Storiqa!</a>
+        <a href="http://storiqa.com">Let&apos;s go Storiqa!</a>
       <br/>
         This is an automatically generated email – please do not reply to it.
       <br/>
@@ -163,7 +163,7 @@ INSERT INTO templates(name, data ) VALUES
       
       You received this e-mail because you have made a request to change your password. In order to do that, please follow the link below:
       
-     <a href=&quot;{{reset_password_path}}/{{token}}&quot;>Reset my password on Storiqa.</a>
+     <a href="{{reset_password_path}}/{{token}}">Reset my password on Storiqa.</a>
       <br/>
       
       Best regards,

@@ -15,6 +15,7 @@ use super::types::RepoResult;
 use models::authorization::*;
 use models::Template;
 use repos::legacy_acl::*;
+use stq_static_resources::TemplateVariant;
 use stq_types::UserId;
 
 use schema::templates::dsl::*;
@@ -79,16 +80,4 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             Scope::Owned => false,
         }
     }
-}
-
-#[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Debug, DieselTypes)]
-pub enum TemplateVariant {
-    OrderUpdateStateForUser,
-    OrderUpdateStateForStore,
-    OrderCreateForUser,
-    OrderCreateForStore,
-    EmailVerificationForUser,
-    PasswordResetForUser,
-    ApplyPasswordResetForUser,
-    ApplyEmailVerificationForUser,
 }

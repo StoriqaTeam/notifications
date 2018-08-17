@@ -22,7 +22,7 @@ use super::types::ServiceFuture;
 use config::SendGridConf;
 use errors::Error;
 use models::SendGridPayload;
-use repos::{ReposFactory, TemplateVariant};
+use repos::ReposFactory;
 
 pub trait MailService {
     /// Send simple mail

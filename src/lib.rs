@@ -35,8 +35,6 @@ extern crate stq_logging;
 extern crate stq_router;
 extern crate stq_static_resources;
 extern crate stq_types;
-#[macro_use]
-extern crate stq_diesel_macro_derive;
 
 pub mod config;
 pub mod controller;

@@ -13,7 +13,8 @@ use r2d2::{ManageConnection, Pool};
 
 use super::types::ServiceFuture;
 use errors::Error;
-use repos::{ReposFactory, TemplateVariant};
+use repos::ReposFactory;
+use stq_static_resources::TemplateVariant;
 
 pub trait TemplatesService {
     /// Get template by name

@@ -29,7 +29,6 @@ use config;
 use errors::Error;
 use models::*;
 use repos::repo_factory::*;
-use repos::templates::TemplateVariant;
 use services::mail::{MailService, SendGridServiceImpl};
 use services::templates::{TemplatesService, TemplatesServiceImpl};
 use services::user_roles::{UserRolesService, UserRolesServiceImpl};

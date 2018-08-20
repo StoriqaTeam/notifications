@@ -61,8 +61,9 @@ pipeline:
     tags:
     - ${DRONE_BRANCH//\//_}
     - ${DRONE_BRANCH//\//_}${DRONE_BUILD_NUMBER}
-    username: stqcommon
-    password: "Tz-q6qDL#d3Mz8hm"
+    secrets:
+    - docker_username
+    - docker_password
     dockerfile: docker/Dockerfile.run
     when:
       event:

@@ -1,5 +1,7 @@
 [server]
-address = "0.0.0.0:8000"
+host = "0.0.0.0"
+port = 8000
+database = "postgresql://notifications:notifications@notifications-pg/notifications"
 thread_count = 20
 
 [client]

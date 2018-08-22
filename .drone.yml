@@ -27,14 +27,25 @@ pipeline:
     when:
       event: pull_request
   test:
-    image: rust:1.26-stretch
+    image: rust:1.28.0-stretch
     environment:
     - RUN_MODE=k8s
     - CARGO_HOME=deps
+    - PGPASSWORD=a1a1a1a1
+    - DATABASE_HOST=db-postgresql
+    - DATABASE_URL=postgresql://notifications:notifications@db-postgresql/notifications
     commands:
     - rustup component add rustfmt-preview
-    - cargo fmt --all -- --write-mode=diff
-    - apt-get update && apt-get install -y ca-certificates
+    - cargo fmt -- --check
+    - apt-get update && apt-get install -y ca-certificates wget gnupg2
+    - wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | apt-key add -
+    - echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
+    - apt-get update && apt-get install -y libpq5 postgresql-client-10
+    - psql -U postgres -h db-postgresql -c "CREATE ROLE notifications WITH PASSWORD 'notifications' LOGIN REPLICATION" -c "CREATE DATABASE notifications OWNER notifications"
+    - psql -U postgres -h db-postgresql -d notifications -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"";
+    - wget -q https://s3.eu-central-1.amazonaws.com/dumpster.stq/diesel -O /usr/local/cargo/bin/diesel
+    - chmod +x /usr/local/cargo/bin/diesel
+    - diesel migration run
     - update-ca-certificates
     - cargo test
     when:
@@ -45,7 +56,7 @@ pipeline:
 ###
 
   build:
-    image: rust:1.26-stretch
+    image: rust:1.28.0-stretch
     environment:
     - CARGO_HOME=deps
     commands:
@@ -191,4 +202,16 @@ pipeline:
       - master
       - release
       status: failure
+
+###
+# Test services
+###
+
+services:
+  db-postgresql:
+    image: postgres:10-alpine
+    environment:
+    - POSTGRES_PASSWORD=a1a1a1a1
+    when:
+      event: pull_request
 

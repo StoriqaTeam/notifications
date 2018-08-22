@@ -1,16 +1,13 @@
-extern crate base64;
 extern crate chrono;
 extern crate config as config_crate;
 #[macro_use]
 extern crate diesel;
-extern crate env_logger;
 #[macro_use]
 extern crate failure;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate hyper;
 extern crate hyper_tls;
-extern crate jsonwebtoken;
 #[macro_use]
 extern crate log;
 extern crate r2d2;
@@ -26,7 +23,6 @@ extern crate lettre_email;
 extern crate mime;
 extern crate native_tls;
 extern crate serde_json;
-extern crate sha3;
 extern crate tokio_core;
 extern crate uuid;
 

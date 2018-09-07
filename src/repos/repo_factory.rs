@@ -65,10 +65,8 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
 #[cfg(test)]
 pub mod tests {
 
-    use std::collections::HashMap;
     use std::error::Error;
     use std::fmt;
-    use std::sync::Arc;
     use std::time::SystemTime;
 
     use diesel::connection::AnsiTransactionManager;
@@ -83,21 +81,13 @@ pub mod tests {
     use diesel::ConnectionResult;
     use diesel::QueryResult;
     use diesel::Queryable;
-    use futures_cpupool::CpuPool;
-    use r2d2;
     use r2d2::ManageConnection;
-    use serde_json;
-    use tokio_core::reactor::Handle;
 
-    use stq_http;
-    use stq_http::client::Config as HttpConfig;
     use stq_static_resources::*;
     use stq_types::*;
 
-    use config::Config;
     use models::*;
     use repos::*;
-    use services::*;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
     pub static MOCK_USER_ID: UserId = UserId(1);
@@ -110,7 +100,7 @@ pub mod tests {
             Box::new(UserRolesRepoMock::default()) as Box<UserRolesRepo>
         }
 
-        fn create_templates_repo<'a>(&self, db_conn: &'a C, user_id: Option<UserId>) -> Box<TemplatesRepo + 'a> {
+        fn create_templates_repo<'a>(&self, _db_conn: &'a C, _user_id: Option<UserId>) -> Box<TemplatesRepo + 'a> {
             Box::new(TemplatesRepoMock::default()) as Box<TemplatesRepo>
         }
     }

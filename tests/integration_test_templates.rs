@@ -12,9 +12,12 @@ pub mod common;
 use hyper::Method;
 
 use std::result;
-use stq_http::client::{self, ClientHandle as HttpClientHandle};
-use stq_types::*;
+
 use tokio_core::reactor::Core;
+
+use stq_http::client::{self, ClientHandle as HttpClientHandle};
+use stq_static_resources::TemplateVariant;
+use stq_types::*;
 
 struct RpcClient {
     http_client: HttpClientHandle,
@@ -45,29 +48,30 @@ impl RpcClient {
     }
 }
 
-fn init_templates_paths() -> Vec<String> {
+fn init_templates() -> Vec<TemplateVariant> {
     vec![
-        "users/template-order-update-state".to_string(),
-        "stores/template-order-update-state".to_string(),
-        "users/template-order-create".to_string(),
-        "stores/template-order-create".to_string(),
-        "users/template-email-verification".to_string(),
-        "users/template-apply-email-verification".to_string(),
-        "users/template-password-reset".to_string(),
-        "users/template-apply-password-reset".to_string(),
+        TemplateVariant::OrderCreateForUser,
+        TemplateVariant::OrderUpdateStateForUser,
+        TemplateVariant::OrderCreateForStore,
+        TemplateVariant::OrderUpdateStateForStore,
+        TemplateVariant::EmailVerificationForUser,
+        TemplateVariant::PasswordResetForUser,
+        TemplateVariant::ApplyPasswordResetForUser,
+        TemplateVariant::ApplyEmailVerificationForUser,
     ]
 }
 
 // test get template by superuser
 #[test]
 fn test_get_template_superuser() {
-    let base_url = common::setup();
-    let templates = init_templates_paths();
     let user_id = UserId(1);
+    let base_url = common::setup();
+    let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
     for template in templates.iter() {
-        let template_result = rpc.request_template(Method::Get, template.clone(), None);
+        let template_result = rpc.request_template(Method::Get, format!("templates/{}", template), None);
+        println!("{:?}", template_result);
         assert!(template_result.is_ok());
     }
 }
@@ -75,13 +79,14 @@ fn test_get_template_superuser() {
 // test get template by regular user
 #[test]
 fn test_get_template_regular_user() {
-    let base_url = common::setup();
-    let templates = init_templates_paths();
     let user_id = UserId(123);
+    let base_url = common::setup();
+    let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
     for template in templates.iter() {
-        let template_result = rpc.request_template(Method::Get, template.clone(), None);
+        let template_result = rpc.request_template(Method::Get, format!("templates/{}", template), None);
+        println!("{:?}", template_result);
         assert!(template_result.is_err());
     }
 }
@@ -90,11 +95,12 @@ fn test_get_template_regular_user() {
 #[test]
 fn test_get_template_unauthorized() {
     let base_url = common::setup();
-    let templates = init_templates_paths();
+    let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), None);
     for template in templates.iter() {
-        let template_result = rpc.request_template(Method::Get, template.clone(), None);
+        let template_result = rpc.request_template(Method::Get, format!("templates/{}", template), None);
+        println!("{:?}", template_result);
         assert!(template_result.is_err());
     }
 }
@@ -106,13 +112,14 @@ fn create_template_mock() -> String {
 // test update template by superuser
 #[test]
 fn test_update_template_superuser() {
-    let base_url = common::setup();
-    let templates = init_templates_paths();
     let user_id = UserId(1);
+    let base_url = common::setup();
+    let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
     for template in templates.iter() {
-        let template_result = rpc.request_template(Method::Put, template.clone(), Some(create_template_mock()));
+        let template_result = rpc.request_template(Method::Put, format!("templates/{}", template), Some(create_template_mock()));
+        println!("{:?}", template_result);
         assert!(template_result.is_ok());
     }
 }
@@ -120,13 +127,14 @@ fn test_update_template_superuser() {
 // test update template by regular user
 #[test]
 fn test_update_template_regular_user() {
-    let base_url = common::setup();
-    let templates = init_templates_paths();
     let user_id = UserId(123);
+    let base_url = common::setup();
+    let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
     for template in templates.iter() {
-        let template_result = rpc.request_template(Method::Put, template.clone(), Some(create_template_mock()));
+        let template_result = rpc.request_template(Method::Put, format!("templates/{}", template), Some(create_template_mock()));
+        println!("{:?}", template_result);
         assert!(template_result.is_err());
     }
 }
@@ -135,11 +143,12 @@ fn test_update_template_regular_user() {
 #[test]
 fn test_update_template_unauthorized() {
     let base_url = common::setup();
-    let templates = init_templates_paths();
+    let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), None);
     for template in templates.iter() {
-        let template_result = rpc.request_template(Method::Put, template.clone(), Some(create_template_mock()));
+        let template_result = rpc.request_template(Method::Put, format!("templates/{}", template), Some(create_template_mock()));
+        println!("{:?}", template_result);
         assert!(template_result.is_err());
     }
 }

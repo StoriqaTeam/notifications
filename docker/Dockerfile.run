@@ -4,7 +4,7 @@ RUN mkdir -p /app/config \
   && mkdir -p /app/migrations \
   && mkdir -p /usr/local/cargo/bin/ \
   && apt-get update \
-  && apt-get install -y wget gnupg2 ca-certificates \
+  && apt-get install -y wget gnupg2 ca-certificates clang \
   && sh -c 'wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | apt-key add -' \
   && sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" >> /etc/apt/sources.list.d/pgdg.list' \
   && wget -q https://s3.eu-central-1.amazonaws.com/dumpster.stq/diesel -O /usr/local/cargo/bin/diesel \

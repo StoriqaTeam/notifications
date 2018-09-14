@@ -25,6 +25,8 @@ extern crate native_tls;
 extern crate serde_json;
 extern crate tokio_core;
 extern crate uuid;
+#[macro_use]
+extern crate sentry;
 
 extern crate stq_http;
 extern crate stq_logging;
@@ -38,6 +40,7 @@ pub mod errors;
 pub mod models;
 pub mod repos;
 pub mod schema;
+pub mod sentry_integration;
 pub mod services;
 
 use std::process;

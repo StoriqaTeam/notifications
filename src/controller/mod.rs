@@ -28,6 +28,7 @@ use self::routes::Route;
 use config;
 use errors::Error;
 use models::*;
+use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
 use services::mail::{MailService, SendGridServiceImpl};
 use services::templates::{TemplatesService, TemplatesServiceImpl};
@@ -45,6 +46,7 @@ where
     pub config: config::Config,
     pub cpu_pool: CpuPool,
     pub route_parser: Arc<RouteParser<Route>>,
+    pub roles_cache: RolesCacheImpl,
     pub repo_factory: F,
     pub http_client: ClientHandle,
 }
@@ -56,13 +58,21 @@ impl<
     > ControllerImpl<T, M, F>
 {
     /// Create a new controller based on services
-    pub fn new(db_pool: Pool<M>, config: config::Config, cpu_pool: CpuPool, http_client: ClientHandle, repo_factory: F) -> Self {
+    pub fn new(
+        db_pool: Pool<M>,
+        config: config::Config,
+        cpu_pool: CpuPool,
+        http_client: ClientHandle,
+        roles_cache: RolesCacheImpl,
+        repo_factory: F,
+    ) -> Self {
         let route_parser = Arc::new(routes::create_route_parser());
         Self {
             db_pool,
             config,
             cpu_pool,
             route_parser,
+            roles_cache,
             repo_factory,
             http_client,
         }
@@ -84,6 +94,8 @@ impl<
             .and_then(|id| i32::from_str(&id).ok())
             .map(UserId);
 
+        let cached_roles = self.roles_cache.clone();
+
         debug!("User with id = '{:?}' is requesting {}", user_id, req.path());
 
         let mail_service = SendGridServiceImpl::new(
@@ -103,7 +115,8 @@ impl<
             self.repo_factory.clone(),
         );
 
-        let user_roles_service = UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), self.repo_factory.clone());
+        let user_roles_service =
+            UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), cached_roles, self.repo_factory.clone());
 
         let path = req.path().to_string();
 

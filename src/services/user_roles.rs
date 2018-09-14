@@ -13,6 +13,7 @@ use errors::Error;
 
 use super::types::ServiceFuture;
 use models::{NewUserRole, OldUserRole, UserRole};
+use repos::roles_cache::RolesCacheImpl;
 use repos::ReposFactory;
 
 pub trait UserRolesService {
@@ -36,6 +37,7 @@ pub struct UserRolesServiceImpl<
 > {
     pub db_pool: Pool<M>,
     pub cpu_pool: CpuPool,
+    pub cached_roles: RolesCacheImpl,
     pub repo_factory: F,
 }
 
@@ -45,10 +47,11 @@ impl<
         F: ReposFactory<T>,
     > UserRolesServiceImpl<T, M, F>
 {
-    pub fn new(db_pool: Pool<M>, cpu_pool: CpuPool, repo_factory: F) -> Self {
+    pub fn new(db_pool: Pool<M>, cpu_pool: CpuPool, cached_roles: RolesCacheImpl, repo_factory: F) -> Self {
         Self {
             db_pool,
             cpu_pool,
+            cached_roles,
             repo_factory,
         }
     }
@@ -63,6 +66,7 @@ impl<
     /// Returns role by user ID
     fn get_roles(&self, user_id: UserId) -> ServiceFuture<Vec<UsersRole>> {
         let db_pool = self.db_pool.clone();
+        let cached_roles = self.cached_roles.clone();
         let repo_factory = self.repo_factory.clone();
 
         Box::new(
@@ -72,8 +76,16 @@ impl<
                         .get()
                         .map_err(|e| e.context(Error::Connection).into())
                         .and_then(move |conn| {
-                            let user_roles_repo = repo_factory.create_user_roles_repo(&*conn);
-                            user_roles_repo.list_for_user(user_id)
+                            if cached_roles.contains(user_id) {
+                                let roles = cached_roles.get(user_id);
+                                Ok(roles)
+                            } else {
+                                let user_roles_repo = repo_factory.create_user_roles_repo(&*conn);
+                                user_roles_repo.list_for_user(user_id).and_then(|roles| {
+                                    cached_roles.add_roles(user_id, &roles);
+                                    Ok(roles)
+                                })
+                            }
                         })
                 })
                 .map_err(|e| e.context("Service UserRoles, get_roles endpoint error occured.").into()),
@@ -83,6 +95,8 @@ impl<
     /// Deletes specific user role
     fn delete(&self, payload: OldUserRole) -> ServiceFuture<UserRole> {
         let db_pool = self.db_pool.clone();
+        let cached_roles = self.cached_roles.clone();
+        let user_id = payload.user_id;
         let repo_factory = self.repo_factory.clone();
 
         Box::new(
@@ -96,6 +110,9 @@ impl<
                             user_roles_repo.delete(payload)
                         })
                 })
+                .inspect(move |_| {
+                    cached_roles.remove(user_id);
+                })
                 .map_err(|e| e.context("Service UserRoles, delete endpoint error occured.").into()),
         )
     }
@@ -103,6 +120,8 @@ impl<
     /// Creates new user_role
     fn create(&self, new_user_role: NewUserRole) -> ServiceFuture<UserRole> {
         let db_pool = self.db_pool.clone();
+        let cached_roles = self.cached_roles.clone();
+        let user_id = new_user_role.user_id;
         let repo_factory = self.repo_factory.clone();
 
         Box::new(
@@ -116,6 +135,9 @@ impl<
                             user_roles_repo.create(new_user_role)
                         })
                 })
+                .inspect(move |_| {
+                    cached_roles.remove(user_id);
+                })
                 .map_err(|e| e.context("Service UserRoles, create endpoint error occured.").into()),
         )
     }
@@ -123,6 +145,7 @@ impl<
     /// Deletes default roles for user
     fn delete_default(&self, user_id_arg: UserId) -> ServiceFuture<UserRole> {
         let db_pool = self.db_pool.clone();
+        let cached_roles = self.cached_roles.clone();
         let repo_factory = self.repo_factory.clone();
 
         Box::new(
@@ -136,6 +159,9 @@ impl<
                             user_roles_repo.delete_by_user_id(user_id_arg)
                         })
                 })
+                .inspect(move |_| {
+                    cached_roles.remove(user_id_arg);
+                })
                 .map_err(|e| e.context("Service UserRoles, delete_default endpoint error occured.").into()),
         )
     }
@@ -143,6 +169,7 @@ impl<
     /// Creates default roles for user
     fn create_default(&self, user_id_arg: UserId) -> ServiceFuture<UserRole> {
         let db_pool = self.db_pool.clone();
+        let cached_roles = self.cached_roles.clone();
         let repo_factory = self.repo_factory.clone();
 
         Box::new(
@@ -160,6 +187,9 @@ impl<
                             user_roles_repo.create(defaul_role)
                         })
                 })
+                .inspect(move |_| {
+                    cached_roles.remove(user_id_arg);
+                })
                 .map_err(|e| e.context("Service UserRoles, create_default endpoint error occured.").into()),
         )
     }
@@ -176,7 +206,6 @@ pub mod tests {
     use super::*;
     use models::*;
     use repos::repo_factory::tests::*;
-    use services::*;
 
     fn create_user_roles_service() -> UserRolesServiceImpl<MockConnection, MockConnectionManager, ReposFactoryMock> {
         let manager = MockConnectionManager::default();
@@ -186,6 +215,7 @@ pub mod tests {
         UserRolesServiceImpl {
             db_pool: db_pool,
             cpu_pool: cpu_pool,
+            cached_roles: RolesCacheImpl::default(),
             repo_factory: MOCK_REPO_FACTORY,
         }
     }

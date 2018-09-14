@@ -79,7 +79,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     let roles_cache = RolesCacheImpl::default();
 
     // Repo factory
-    let repo_factory = ReposFactoryImpl::new(roles_cache);
+    let repo_factory = ReposFactoryImpl::new(roles_cache.clone());
 
     let http_config = stq_http::client::Config {
         http_client_retries: config.client.http_client_retries,
@@ -99,6 +99,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
                     config.clone(),
                     cpu_pool.clone(),
                     client_handle.clone(),
+                    roles_cache.clone(),
                     repo_factory.clone(),
                 );
 

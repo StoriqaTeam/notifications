@@ -25,6 +25,8 @@ extern crate native_tls;
 extern crate serde_json;
 extern crate tokio_core;
 extern crate uuid;
+#[macro_use]
+extern crate sentry;
 
 extern crate stq_http;
 extern crate stq_logging;
@@ -38,6 +40,7 @@ pub mod errors;
 pub mod models;
 pub mod repos;
 pub mod schema;
+pub mod sentry_integration;
 pub mod services;
 
 use std::process;
@@ -108,8 +111,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
 
                 Ok(app)
             }
-        })
-        .unwrap_or_else(|reason| {
+        }).unwrap_or_else(|reason| {
             eprintln!("Http Server Initialization Error: {}", reason);
             process::exit(1);
         });
@@ -122,8 +124,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
                     handle.spawn(conn.map(|_| ()).map_err(|why| eprintln!("Server Error: {:?}", why)));
                     Ok(())
                 }
-            })
-            .map_err(|_| ()),
+            }).map_err(|_| ()),
     );
 
     info!("Listening on http://{}, threads: {}", address, thread_count);

@@ -57,7 +57,7 @@ pipeline:
 ###
 
   build:
-    image: rust:1.29-stretch
+    image: rust:1.29.0-stretch
     environment:
     - CARGO_HOME=deps
     commands:

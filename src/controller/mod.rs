@@ -130,8 +130,7 @@ impl<
                             e.context("Parsing body // POST /simple-mail in SimpleMail failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.send_mail(mail)),
+                        }).and_then(move |mail| mail_service.send_mail(mail)),
                 )
             }
             // POST /users/order-update-state
@@ -143,8 +142,7 @@ impl<
                             e.context("Parsing body // POST /users/order-update-state in OrderUpdateStateForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.order_update_user(mail)),
+                        }).and_then(move |mail| mail_service.order_update_user(mail)),
                 )
             }
             // GET /templates/<template_name>
@@ -167,8 +165,7 @@ impl<
                             e.context("Parsing body // PUT /templates in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |text| templates_service.update_template(template, text)),
+                        }).and_then(move |text| templates_service.update_template(template, text)),
                 )
             }
             // POST /stores/order-update-state
@@ -180,8 +177,7 @@ impl<
                             e.context("Parsing body // POST /stores/order-update-state in OrderUpdateStateForStore failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.order_update_store(mail)),
+                        }).and_then(move |mail| mail_service.order_update_store(mail)),
                 )
             }
             // POST /users/email-verification
@@ -193,8 +189,7 @@ impl<
                             e.context("Parsing body // POST /users/email-verification in EmailVerificationForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.email_verification(mail)),
+                        }).and_then(move |mail| mail_service.email_verification(mail)),
                 )
             }
             // POST /stores/order-create
@@ -206,8 +201,7 @@ impl<
                             e.context("Parsing body // POST /stores/order-create in OrderCreateForStore failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.order_create_store(mail)),
+                        }).and_then(move |mail| mail_service.order_create_store(mail)),
                 )
             }
             // POST /users/order-create
@@ -219,8 +213,7 @@ impl<
                             e.context("Parsing body // POST /users/order-create in OrderCreateForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.order_create_user(mail)),
+                        }).and_then(move |mail| mail_service.order_create_user(mail)),
                 )
             }
             // POST /users/apply-email-verification
@@ -235,8 +228,7 @@ impl<
                             e.context("Parsing body // POST /users/apply-email-verification in ApplyEmailVerificationForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.apply_email_verification(mail)),
+                        }).and_then(move |mail| mail_service.apply_email_verification(mail)),
                 )
             }
             // POST /users/password-reset
@@ -248,8 +240,7 @@ impl<
                             e.context("Parsing body // POST /users/password-reset in PasswordResetForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.password_reset(mail)),
+                        }).and_then(move |mail| mail_service.password_reset(mail)),
                 )
             }
             // POST /users/apply-password-reset
@@ -261,8 +252,7 @@ impl<
                             e.context("Parsing body // POST /users/apply-password-reset in ApplyPasswordResetForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |mail| mail_service.apply_password_reset(mail)),
+                        }).and_then(move |mail| mail_service.apply_password_reset(mail)),
                 )
             }
             // GET /user_role/<user_id>
@@ -279,8 +269,7 @@ impl<
                             e.context("Parsing body // POST /user_roles in NewUserRole failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |new_role| user_roles_service.create(new_role)),
+                        }).and_then(move |new_role| user_roles_service.create(new_role)),
                 )
             }
             // DELETE /user_roles
@@ -292,8 +281,7 @@ impl<
                             e.context("Parsing body // DELETE /user_roles/<user_role_id> in OldUserRole failed!")
                                 .context(Error::Parse)
                                 .into()
-                        })
-                        .and_then(move |old_role| user_roles_service.delete(old_role)),
+                        }).and_then(move |old_role| user_roles_service.delete(old_role)),
                 )
             }
             // POST /roles/default/<user_id>

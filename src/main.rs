@@ -8,7 +8,7 @@ fn main() {
     let config = notifications_lib::config::Config::new().expect("Can't load app config!");
 
     // Prepare sentry integration
-    let _sentry = notifications_lib::sentry_integration::init(&config);
+    let _sentry = notifications_lib::sentry_integration::init(config.sentry.as_ref());
 
     // Prepare logger
     stq_logging::init(config.graylog.as_ref());

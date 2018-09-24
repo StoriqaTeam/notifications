@@ -11,7 +11,6 @@ extern crate hyper_tls;
 #[macro_use]
 extern crate log;
 extern crate r2d2;
-extern crate r2d2_diesel;
 extern crate rand;
 extern crate regex;
 extern crate serde;
@@ -47,11 +46,11 @@ use std::process;
 use std::sync::Arc;
 
 use diesel::pg::PgConnection;
+use diesel::r2d2::ConnectionManager;
 use futures::future;
 use futures::prelude::*;
 use futures_cpupool::CpuPool;
 use hyper::server::Http;
-use r2d2_diesel::ConnectionManager;
 use tokio_core::reactor::Core;
 
 use stq_http::controller::Application;

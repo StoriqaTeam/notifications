@@ -65,8 +65,12 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
 #[cfg(test)]
 pub mod tests {
 
+    extern crate r2d2;
+    extern crate stq_http;
+
     use std::error::Error;
     use std::fmt;
+    use std::sync::Arc;
     use std::time::SystemTime;
 
     use diesel::connection::AnsiTransactionManager;
@@ -81,16 +85,38 @@ pub mod tests {
     use diesel::ConnectionResult;
     use diesel::QueryResult;
     use diesel::Queryable;
+    use futures_cpupool::CpuPool;
     use r2d2::ManageConnection;
+    use tokio_core::reactor::Handle;
 
     use stq_static_resources::*;
     use stq_types::*;
 
+    use config::Config;
+    use controller::context::{DynamicContext, StaticContext};
     use models::*;
     use repos::*;
+    use services::*;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
     pub static MOCK_USER_ID: UserId = UserId(1);
+
+    pub fn create_service(
+        user_id: Option<UserId>,
+        handle: Arc<Handle>,
+    ) -> Service<MockConnection, MockConnectionManager, ReposFactoryMock> {
+        let manager = MockConnectionManager::default();
+        let db_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
+        let cpu_pool = CpuPool::new(1);
+
+        let config = Config::new().unwrap();
+        let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
+        let client_handle = client.handle();
+        let static_context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), MOCK_REPO_FACTORY);
+        let dynamic_context = DynamicContext::new(user_id);
+
+        Service::new(static_context, dynamic_context)
+    }
 
     #[derive(Default, Copy, Clone)]
     pub struct ReposFactoryMock;

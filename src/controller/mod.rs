@@ -1,3 +1,4 @@
+pub mod context;
 pub mod routes;
 
 use std::str::FromStr;
@@ -24,31 +25,26 @@ use stq_router::RouteParser;
 use stq_static_resources::*;
 use stq_types::*;
 
+use self::context::{DynamicContext, StaticContext};
 use self::routes::Route;
 use config;
 use errors::Error;
 use models::*;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::*;
-use services::mail::{MailService, SendGridServiceImpl};
-use services::templates::{TemplatesService, TemplatesServiceImpl};
-use services::user_roles::{UserRolesService, UserRolesServiceImpl};
+use services::mail::MailService;
+use services::templates::TemplatesService;
+use services::user_roles::UserRolesService;
+use services::Service;
 
 /// Controller handles route parsing and calling `Service` layer
-#[derive(Clone)]
 pub struct ControllerImpl<T, M, F>
 where
     T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static,
     M: ManageConnection<Connection = T>,
     F: ReposFactory<T>,
 {
-    pub db_pool: Pool<M>,
-    pub config: config::Config,
-    pub cpu_pool: CpuPool,
-    pub route_parser: Arc<RouteParser<Route>>,
-    pub roles_cache: RolesCacheImpl,
-    pub repo_factory: F,
-    pub http_client: ClientHandle,
+    pub static_context: StaticContext<T, M, F>,
 }
 
 impl<
@@ -58,24 +54,8 @@ impl<
     > ControllerImpl<T, M, F>
 {
     /// Create a new controller based on services
-    pub fn new(
-        db_pool: Pool<M>,
-        config: config::Config,
-        cpu_pool: CpuPool,
-        http_client: ClientHandle,
-        roles_cache: RolesCacheImpl,
-        repo_factory: F,
-    ) -> Self {
-        let route_parser = Arc::new(routes::create_route_parser());
-        Self {
-            db_pool,
-            config,
-            cpu_pool,
-            route_parser,
-            roles_cache,
-            repo_factory,
-            http_client,
-        }
+    pub fn new(static_context: StaticContext<T, M, F>) -> Self {
+        Self { static_context }
     }
 }
 
@@ -94,33 +74,15 @@ impl<
             .and_then(|id| i32::from_str(&id).ok())
             .map(UserId);
 
-        let cached_roles = self.roles_cache.clone();
-
         debug!("User with id = '{:?}' is requesting {}", user_id, req.path());
 
-        let mail_service = SendGridServiceImpl::new(
-            self.cpu_pool.clone(),
-            self.http_client.clone(),
-            user_id.clone(),
-            self.config.sendgrid.clone(),
-            self.db_pool.clone(),
-            self.repo_factory.clone(),
-        );
+        let dynamic_context = DynamicContext::new(user_id);
 
-        let templates_service = TemplatesServiceImpl::new(
-            self.cpu_pool.clone(),
-            self.http_client.clone(),
-            user_id.clone(),
-            self.db_pool.clone(),
-            self.repo_factory.clone(),
-        );
-
-        let user_roles_service =
-            UserRolesServiceImpl::new(self.db_pool.clone(), self.cpu_pool.clone(), cached_roles, self.repo_factory.clone());
+        let service = Service::new(self.static_context.clone(), dynamic_context);
 
         let path = req.path().to_string();
 
-        match (&req.method().clone(), self.route_parser.test(req.path())) {
+        match (&req.method().clone(), self.static_context.route_parser.test(req.path())) {
             // POST /simple-mail
             (&Post, Some(Route::SimpleMail)) => {
                 debug!("User with id = '{:?}' is requesting // POST /simple-mail", user_id);
@@ -130,7 +92,7 @@ impl<
                             e.context("Parsing body // POST /simple-mail in SimpleMail failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.send_mail(mail)),
+                        }).and_then(move |mail| service.send_mail(mail)),
                 )
             }
             // POST /users/order-update-state
@@ -142,7 +104,7 @@ impl<
                             e.context("Parsing body // POST /users/order-update-state in OrderUpdateStateForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.order_update_user(mail)),
+                        }).and_then(move |mail| service.order_update_user(mail)),
                 )
             }
             // GET /templates/<template_name>
@@ -151,7 +113,7 @@ impl<
                     "User with id = '{:?}' is requesting // GET /templates by name: {:?}",
                     user_id, template
                 );
-                serialize_future(templates_service.get_template_by_name(template))
+                serialize_future(service.get_template_by_name(template))
             }
             // PUT /templates/<template_name>
             (&Put, Some(Route::Templates { template })) => {
@@ -165,7 +127,7 @@ impl<
                             e.context("Parsing body // PUT /templates in UpdateTemplate failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |text| templates_service.update_template(template, text)),
+                        }).and_then(move |text| service.update_template(template, text)),
                 )
             }
             // POST /stores/order-update-state
@@ -177,7 +139,7 @@ impl<
                             e.context("Parsing body // POST /stores/order-update-state in OrderUpdateStateForStore failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.order_update_store(mail)),
+                        }).and_then(move |mail| service.order_update_store(mail)),
                 )
             }
             // POST /users/email-verification
@@ -189,7 +151,7 @@ impl<
                             e.context("Parsing body // POST /users/email-verification in EmailVerificationForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.email_verification(mail)),
+                        }).and_then(move |mail| service.email_verification(mail)),
                 )
             }
             // POST /stores/order-create
@@ -201,7 +163,7 @@ impl<
                             e.context("Parsing body // POST /stores/order-create in OrderCreateForStore failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.order_create_store(mail)),
+                        }).and_then(move |mail| service.order_create_store(mail)),
                 )
             }
             // POST /users/order-create
@@ -213,7 +175,7 @@ impl<
                             e.context("Parsing body // POST /users/order-create in OrderCreateForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.order_create_user(mail)),
+                        }).and_then(move |mail| service.order_create_user(mail)),
                 )
             }
             // POST /users/apply-email-verification
@@ -228,7 +190,7 @@ impl<
                             e.context("Parsing body // POST /users/apply-email-verification in ApplyEmailVerificationForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.apply_email_verification(mail)),
+                        }).and_then(move |mail| service.apply_email_verification(mail)),
                 )
             }
             // POST /users/password-reset
@@ -240,7 +202,7 @@ impl<
                             e.context("Parsing body // POST /users/password-reset in PasswordResetForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.password_reset(mail)),
+                        }).and_then(move |mail| service.password_reset(mail)),
                 )
             }
             // POST /users/apply-password-reset
@@ -252,13 +214,13 @@ impl<
                             e.context("Parsing body // POST /users/apply-password-reset in ApplyPasswordResetForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| mail_service.apply_password_reset(mail)),
+                        }).and_then(move |mail| service.apply_password_reset(mail)),
                 )
             }
             // GET /user_role/<user_id>
             (&Get, Some(Route::UserRole(user_id_arg))) => {
                 debug!("User with id = '{:?}' is requesting  // GET /user_role/{}", user_id, user_id_arg);
-                serialize_future(user_roles_service.get_roles(user_id_arg))
+                serialize_future(service.get_roles(user_id_arg))
             }
             // POST /user_roles
             (&Post, Some(Route::UserRoles)) => {
@@ -269,7 +231,7 @@ impl<
                             e.context("Parsing body // POST /user_roles in NewUserRole failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |new_role| user_roles_service.create(new_role)),
+                        }).and_then(move |new_role| service.create(new_role)),
                 )
             }
             // DELETE /user_roles
@@ -281,7 +243,7 @@ impl<
                             e.context("Parsing body // DELETE /user_roles/<user_role_id> in OldUserRole failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |old_role| user_roles_service.delete(old_role)),
+                        }).and_then(move |old_role| service.delete(old_role)),
                 )
             }
             // POST /roles/default/<user_id>
@@ -290,7 +252,7 @@ impl<
                     "User with id = '{:?}' is requesting  // POST /roles/default/{}",
                     user_id, user_id_arg
                 );
-                serialize_future(user_roles_service.create_default(user_id_arg))
+                serialize_future(service.create_default(user_id_arg))
             }
             // DELETE /roles/default/<user_id>
             (&Delete, Some(Route::DefaultRole(user_id_arg))) => {
@@ -298,7 +260,7 @@ impl<
                     "User with id = '{:?}' is requesting  // DELETE /roles/default/{}",
                     user_id, user_id_arg
                 );
-                serialize_future(user_roles_service.delete_default(user_id_arg))
+                serialize_future(service.delete_default(user_id_arg))
             }
 
             // Fallback

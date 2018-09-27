@@ -16,9 +16,9 @@ pub enum Route {
     PasswordResetForUser,
     ApplyPasswordResetForUser,
     ApplyEmailVerificationForUser,
-    UserRoles,
-    UserRole(UserId),
-    DefaultRole(UserId),
+    Roles,
+    RoleById { id: RoleId },
+    RolesByUserId { user_id: UserId },
     Templates { template: TemplateVariant },
 }
 
@@ -43,25 +43,21 @@ pub fn create_route_parser() -> RouteParser<Route> {
     router.add_route(r"^/users/password-reset$", || Route::PasswordResetForUser);
     // ApplyPasswordResetForUser
     router.add_route(r"^/users/apply-password-reset$", || Route::ApplyPasswordResetForUser);
-    // User_roles Routes
-    router.add_route(r"^/user_roles$", || Route::UserRoles);
 
-    // User_roles/:id route
-    router.add_route_with_params(r"^/user_roles/(\d+)$", |params| {
+    router.add_route(r"^/roles$", || Route::Roles);
+
+    router.add_route_with_params(r"^/roles/by-user-id/(\d+)$", |params| {
         params
             .get(0)
-            .and_then(|string_id| string_id.parse::<i32>().ok())
-            .map(UserId)
-            .map(Route::UserRole)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|user_id| Route::RolesByUserId { user_id })
     });
 
-    // roles/default/:id route
-    router.add_route_with_params(r"^/roles/default/(\d+)$", |params| {
+    router.add_route_with_params(r"^/roles/by-id/([a-zA-Z0-9-]+)$", |params| {
         params
             .get(0)
-            .and_then(|string_id| string_id.parse::<i32>().ok())
-            .map(UserId)
-            .map(Route::DefaultRole)
+            .and_then(|string_id| string_id.parse().ok())
+            .map(|id| Route::RoleById { id })
     });
 
     router.add_route_with_params(r"^/templates/([a-zA-Z-_]+)$", |params| {

@@ -1,17 +1,10 @@
 use failure::Error as FailureError;
-use failure::Fail;
-use futures::prelude::*;
-use futures_cpupool::CpuPool;
-
-use stq_http::client::ClientHandle;
-use stq_types::UserId;
 
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
-use r2d2::{ManageConnection, Pool};
+use r2d2::ManageConnection;
 
-use errors::Error;
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
 use stq_static_resources::TemplateVariant;

@@ -9,16 +9,16 @@ use diesel::prelude::*;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::Connection;
 use failure::Error as FailureError;
-use failure::Fail;
 
-use stq_types::{UserId, UsersRole};
+use stq_types::{RoleId, UserId, UsersRole};
 
 use repos::legacy_acl::*;
 
+use super::acl;
 use super::types::RepoResult;
 use models::authorization::*;
-use models::{NewUserRole, OldUserRole, UserRole};
-use repos::RolesCacheImpl;
+use models::{NewUserRole, UserRole};
+use repos::acl::RolesCacheImpl;
 use schema::user_roles::dsl::*;
 
 /// UserRoles repository for handling UserRoles
@@ -30,10 +30,13 @@ pub trait UserRolesRepo {
     fn create(&self, payload: NewUserRole) -> RepoResult<UserRole>;
 
     /// Delete role of a user
-    fn delete(&self, payload: OldUserRole) -> RepoResult<UserRole>;
+    fn delete_user_role(&self, user_id_arg: UserId, name_arg: UsersRole) -> RepoResult<UserRole>;
+
+    /// Delete role of a user
+    fn delete_by_id(&self, id_arg: RoleId) -> RepoResult<UserRole>;
 
     /// Delete user roles by user id
-    fn delete_by_user_id(&self, user_id_arg: UserId) -> RepoResult<UserRole>;
+    fn delete_by_user_id(&self, user_id_arg: UserId) -> RepoResult<Vec<UserRole>>;
 }
 
 /// Implementation of UserRoles trait
@@ -54,6 +57,7 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
 }
 
 impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 'static> UserRolesRepo for UserRolesRepoImpl<'a, T> {
+    /// Returns list of user_roles for a specific user
     fn list_for_user(&self, user_id_value: UserId) -> RepoResult<Vec<UsersRole>> {
         debug!("list user roles for id {}.", user_id_value);
         if self.cached_roles.contains(user_id_value) {
@@ -63,10 +67,14 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
             let query = user_roles.filter(user_id.eq(user_id_value));
             query
                 .get_results::<UserRole>(self.db_conn)
-                .and_then(|user_roles_arg| {
+                .map_err(From::from)
+                .and_then(|user_roles_arg: Vec<UserRole>| {
+                    for user_role_arg in &user_roles_arg {
+                        acl::check(&*self.acl, Resource::UserRoles, Action::Read, self, Some(&user_role_arg))?;
+                    }
                     let roles = user_roles_arg
                         .into_iter()
-                        .map(|user_role| user_role.role)
+                        .map(|user_role| user_role.name)
                         .collect::<Vec<UsersRole>>();
                     Ok(roles)
                 }).and_then(|roles| {
@@ -74,37 +82,73 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                         self.cached_roles.add_roles(user_id_value, &roles);
                     }
                     Ok(roles)
-                }).map_err(|e| e.context(format!("List user roles for id {} error occured.", user_id_value)).into())
+                }).map_err(|e: FailureError| {
+                    e.context(format!("List user roles for user {} error occured.", user_id_value))
+                        .into()
+                })
         }
     }
 
+    /// Create a new user role
     fn create(&self, payload: NewUserRole) -> RepoResult<UserRole> {
-        debug!("create new user role {:?}.", payload);
         self.cached_roles.remove(payload.user_id);
         let query = diesel::insert_into(user_roles).values(&payload);
         query
             .get_result(self.db_conn)
-            .map_err(|e| e.context(format!("create new user role {:?}.", payload)).into())
+            .map_err(From::from)
+            .and_then(|user_role_arg: UserRole| {
+                acl::check(&*self.acl, Resource::UserRoles, Action::Create, self, Some(&user_role_arg))?;
+                Ok(user_role_arg)
+            }).map_err(|e: FailureError| e.context(format!("Create a new user role {:?} error occured", payload)).into())
     }
 
-    fn delete(&self, payload: OldUserRole) -> RepoResult<UserRole> {
-        debug!("delete user role {:?}.", payload);
-        self.cached_roles.remove(payload.user_id);
-        let filtered = user_roles.filter(user_id.eq(payload.user_id)).filter(role.eq(payload.role));
+    /// Delete role of a user
+    fn delete_by_id(&self, id_arg: RoleId) -> RepoResult<UserRole> {
+        let filtered = user_roles.filter(id.eq(id_arg));
         let query = diesel::delete(filtered);
         query
             .get_result(self.db_conn)
-            .map_err(move |e| e.context(format!("delete user role {:?}.", payload)).into())
+            .map_err(From::from)
+            .and_then(|user_role_arg: UserRole| {
+                acl::check(&*self.acl, Resource::UserRoles, Action::Delete, self, Some(&user_role_arg))?;
+                Ok(user_role_arg)
+            }).map(|user_role: UserRole| {
+                self.cached_roles.remove(user_role.user_id);
+                user_role
+            }).map_err(|e: FailureError| e.context(format!("Delete user role {:?} error occured", id_arg)).into())
     }
 
-    fn delete_by_user_id(&self, user_id_arg: UserId) -> RepoResult<UserRole> {
-        debug!("delete user role by id {}.", user_id_arg);
+    /// Delete user roles by user id
+    fn delete_by_user_id(&self, user_id_arg: UserId) -> RepoResult<Vec<UserRole>> {
         self.cached_roles.remove(user_id_arg);
         let filtered = user_roles.filter(user_id.eq(user_id_arg));
         let query = diesel::delete(filtered);
         query
+            .get_results(self.db_conn)
+            .map_err(From::from)
+            .and_then(|user_roles_arg: Vec<UserRole>| {
+                for user_role_arg in &user_roles_arg {
+                    acl::check(&*self.acl, Resource::UserRoles, Action::Delete, self, Some(&user_role_arg))?;
+                }
+                Ok(user_roles_arg)
+            }).map_err(|e: FailureError| e.context(format!("Delete user {} roles error occured", user_id_arg)).into())
+    }
+
+    /// Delete user roles by user id and name
+    fn delete_user_role(&self, user_id_arg: UserId, name_arg: UsersRole) -> RepoResult<UserRole> {
+        self.cached_roles.remove(user_id_arg);
+        let filtered = user_roles.filter(user_id.eq(user_id_arg)).filter(name.eq(name_arg));
+        let query = diesel::delete(filtered);
+        query
             .get_result(self.db_conn)
-            .map_err(|e| e.context(format!("delete user role by id {}.", user_id_arg)).into())
+            .map_err(From::from)
+            .and_then(|user_role_arg| {
+                acl::check(&*self.acl, Resource::UserRoles, Action::Delete, self, Some(&user_role_arg))?;
+                Ok(user_role_arg)
+            }).map_err(|e: FailureError| {
+                e.context(format!("Delete user {} role {:?} error occured", user_id_arg, name_arg))
+                    .into()
+            })
     }
 }
 

@@ -2,7 +2,6 @@ pub mod context;
 pub mod routes;
 
 use std::str::FromStr;
-use std::sync::Arc;
 
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
@@ -10,29 +9,24 @@ use diesel::Connection;
 use failure::Fail;
 use futures::future;
 use futures::prelude::*;
-use futures_cpupool::CpuPool;
 use hyper::header::Authorization;
 use hyper::server::Request;
 use hyper::{Delete, Get, Post, Put};
-use r2d2::{ManageConnection, Pool};
+use r2d2::ManageConnection;
 
-use stq_http::client::ClientHandle;
 use stq_http::controller::Controller;
 use stq_http::controller::ControllerFuture;
 use stq_http::request_util::serialize_future;
 use stq_http::request_util::{parse_body, read_body};
-use stq_router::RouteParser;
 use stq_static_resources::*;
 use stq_types::*;
 
 use self::context::{DynamicContext, StaticContext};
 use self::routes::Route;
-use config;
 use errors::Error;
-use models::*;
-use repos::acl::RolesCacheImpl;
+use models;
 use repos::repo_factory::*;
-use services::mail::MailService;
+use services::mail::{MailService, SimpleMailService};
 use services::templates::TemplatesService;
 use services::user_roles::UserRolesService;
 use services::Service;
@@ -104,7 +98,7 @@ impl<
                             e.context("Parsing body // POST /users/order-update-state in OrderUpdateStateForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.order_update_user(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::OrderUpdateStateForUser, mail)),
                 )
             }
             // GET /templates/<template_name>
@@ -139,7 +133,7 @@ impl<
                             e.context("Parsing body // POST /stores/order-update-state in OrderUpdateStateForStore failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.order_update_store(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::OrderUpdateStateForStore, mail)),
                 )
             }
             // POST /users/email-verification
@@ -151,7 +145,7 @@ impl<
                             e.context("Parsing body // POST /users/email-verification in EmailVerificationForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.email_verification(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::EmailVerificationForUser, mail)),
                 )
             }
             // POST /stores/order-create
@@ -163,7 +157,7 @@ impl<
                             e.context("Parsing body // POST /stores/order-create in OrderCreateForStore failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.order_create_store(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::OrderCreateForStore, mail)),
                 )
             }
             // POST /users/order-create
@@ -175,7 +169,7 @@ impl<
                             e.context("Parsing body // POST /users/order-create in OrderCreateForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.order_create_user(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::OrderCreateForUser, mail)),
                 )
             }
             // POST /users/apply-email-verification
@@ -190,7 +184,7 @@ impl<
                             e.context("Parsing body // POST /users/apply-email-verification in ApplyEmailVerificationForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.apply_email_verification(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::ApplyEmailVerificationForUser, mail)),
                 )
             }
             // POST /users/password-reset
@@ -202,7 +196,7 @@ impl<
                             e.context("Parsing body // POST /users/password-reset in PasswordResetForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.password_reset(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::PasswordResetForUser, mail)),
                 )
             }
             // POST /users/apply-password-reset
@@ -214,53 +208,32 @@ impl<
                             e.context("Parsing body // POST /users/apply-password-reset in ApplyPasswordResetForUser failed!")
                                 .context(Error::Parse)
                                 .into()
-                        }).and_then(move |mail| service.apply_password_reset(mail)),
+                        }).and_then(move |mail| service.send_email_with_template(TemplateVariant::ApplyPasswordResetForUser, mail)),
                 )
             }
-            // GET /user_role/<user_id>
-            (&Get, Some(Route::UserRole(user_id_arg))) => {
-                debug!("User with id = '{:?}' is requesting  // GET /user_role/{}", user_id, user_id_arg);
-                serialize_future(service.get_roles(user_id_arg))
+            (Get, Some(Route::RolesByUserId { user_id })) => {
+                debug!("Received request to get roles by user id {}", user_id);
+                serialize_future({ service.get_roles(user_id) })
             }
-            // POST /user_roles
-            (&Post, Some(Route::UserRoles)) => {
-                debug!("User with id = '{:?}' is requesting  // POST /user_roles", user_id);
-                serialize_future(
-                    parse_body::<NewUserRole>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // POST /user_roles in NewUserRole failed!")
-                                .context(Error::Parse)
-                                .into()
-                        }).and_then(move |new_role| service.create(new_role)),
-                )
+            (Post, Some(Route::Roles)) => serialize_future({
+                parse_body::<models::NewUserRole>(req.body()).and_then(move |data| {
+                    debug!("Received request to create role {:?}", data);
+                    service.create_user_role(data)
+                })
+            }),
+            (Delete, Some(Route::Roles)) => serialize_future({
+                parse_body::<models::RemoveUserRole>(req.body()).and_then(move |data| {
+                    debug!("Received request to remove role {:?}", data);
+                    service.delete_user_role(data)
+                })
+            }),
+            (Delete, Some(Route::RolesByUserId { user_id })) => {
+                debug!("Received request to delete role by user id {}", user_id);
+                serialize_future({ service.delete_user_role_by_user_id(user_id) })
             }
-            // DELETE /user_roles
-            (&Delete, Some(Route::UserRoles)) => {
-                debug!("User with id = '{:?}' is requesting  // DELETE /user_roles", user_id);
-                serialize_future(
-                    parse_body::<OldUserRole>(req.body())
-                        .map_err(|e| {
-                            e.context("Parsing body // DELETE /user_roles/<user_role_id> in OldUserRole failed!")
-                                .context(Error::Parse)
-                                .into()
-                        }).and_then(move |old_role| service.delete(old_role)),
-                )
-            }
-            // POST /roles/default/<user_id>
-            (&Post, Some(Route::DefaultRole(user_id_arg))) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // POST /roles/default/{}",
-                    user_id, user_id_arg
-                );
-                serialize_future(service.create_default(user_id_arg))
-            }
-            // DELETE /roles/default/<user_id>
-            (&Delete, Some(Route::DefaultRole(user_id_arg))) => {
-                debug!(
-                    "User with id = '{:?}' is requesting  // DELETE /roles/default/{}",
-                    user_id, user_id_arg
-                );
-                serialize_future(service.delete_default(user_id_arg))
+            (Delete, Some(Route::RoleById { id })) => {
+                debug!("Received request to delete role by id {}", id);
+                serialize_future({ service.delete_user_role_by_id(id) })
             }
 
             // Fallback

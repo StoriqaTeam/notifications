@@ -1,3 +1,4 @@
+#![allow(proc_macro_derive_resolution_fallback)]
 extern crate chrono;
 extern crate config as config_crate;
 #[macro_use]

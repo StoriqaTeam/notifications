@@ -122,7 +122,7 @@ pub mod tests {
         let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
         let client_handle = client.handle();
         let static_context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), MOCK_REPO_FACTORY);
-        let dynamic_context = DynamicContext::new(user_id);
+        let dynamic_context = DynamicContext::new(user_id, String::default());
 
         Service::new(static_context, dynamic_context)
     }

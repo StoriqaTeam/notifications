@@ -32,7 +32,7 @@ where
                 .get_template_by_name(template_name)
                 .map(|template| template.data)
                 .map_err(|e: FailureError| {
-                    e.context("Service MailService, get_template_by_name endpoint error occured.")
+                    e.context("Service MailService, get_template_by_name endpoint error occurred.")
                         .into()
                 })
         })
@@ -47,7 +47,7 @@ where
             templates_repo
                 .update(template_name, text)
                 .map(|template| template.data)
-                .map_err(|e: FailureError| e.context("Service MailService, update_template endpoint error occured.").into())
+                .map_err(|e: FailureError| e.context("Service MailService, update_template endpoint error occurred.").into())
         })
     }
 }

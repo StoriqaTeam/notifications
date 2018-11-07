@@ -50,8 +50,6 @@ where
             from_email,
         } = self.static_context.config.sendgrid.clone();
 
-        debug!("send email from template {:?}", template_name);
-
         let http_clone = self.static_context.client_handle.clone();
         let url = format!("{}/{}", api_addr.clone(), send_mail_path.clone());
         let handlebars = Handlebars::new();
@@ -80,6 +78,8 @@ where
             }).map_err(|e: FailureError| e.context("Mail service, send_email_with_template endpoint error occured.").into())
             .and_then(move |body| {
                 debug!("Sending payload: {}", &body);
+                info!("prepare for sending email from template {:?}", template_name);
+
                 let mut headers = Headers::new();
                 headers.set(Authorization(Bearer { token: api_key }));
                 headers.set(ContentType(mime::APPLICATION_JSON));
@@ -116,6 +116,7 @@ where
                 .map_err(|e| e.context("Couldn't parse payload").into())
                 .and_then(move |body| {
                     debug!("Sending payload: {}", &body);
+                    info!("prepare for sending simple email");
 
                     let mut headers = Headers::new();
                     headers.set(Authorization(Bearer { token: api_key }));

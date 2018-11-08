@@ -24,6 +24,7 @@ extern crate mime;
 extern crate native_tls;
 extern crate serde_json;
 extern crate tokio_core;
+extern crate tokio_signal;
 extern crate uuid;
 #[macro_use]
 extern crate sentry;
@@ -120,5 +121,9 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
         callback();
         future::ok(())
     });
-    core.run(future::empty::<(), ()>()).unwrap();
+
+    core.run(tokio_signal::ctrl_c().flatten_stream().take(1u64).for_each(|()| {
+        info!("Ctrl+C received. Exit");
+        Ok(())
+    })).unwrap();
 }

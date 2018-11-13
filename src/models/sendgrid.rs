@@ -28,7 +28,7 @@ pub struct Content {
 }
 
 impl SendGridPayload {
-    pub fn from_send_mail(send_mail: SimpleMail, from_email: String, type_field: Mime) -> Self {
+    pub fn from_send_mail(send_mail: SimpleMail, from_email: String, from_name: String, type_field: Mime) -> Self {
         let mut to: Vec<Address> = Vec::new();
         to.push(Address {
             email: send_mail.to.clone(),
@@ -40,7 +40,7 @@ impl SendGridPayload {
 
         let from = Address {
             email: from_email,
-            name: None,
+            name: Some(from_name),
         };
 
         let subject = send_mail.subject.clone();

@@ -43,6 +43,7 @@ pub struct SendGridConf {
     pub api_key: String,
     pub send_mail_path: String,
     pub from_email: String,
+    pub from_name: String,
 }
 
 /// Creates new app config struct

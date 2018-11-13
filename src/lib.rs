@@ -18,8 +18,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate handlebars;
-extern crate lettre;
-extern crate lettre_email;
 extern crate mime;
 extern crate native_tls;
 extern crate serde_json;

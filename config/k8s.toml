@@ -9,6 +9,7 @@ api_addr = "https://api.sendgrid.com/v3"
 api_key = "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"
 send_mail_path = "/mail/send"
 from_email = "support@storiqa.com"
+from_name = "Storiqa"
 
 [graylog]
 addr = "udplog.stq.cloud:32303"

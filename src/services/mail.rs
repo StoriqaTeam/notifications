@@ -48,6 +48,7 @@ where
             api_key,
             send_mail_path,
             from_email,
+            from_name,
         } = self.static_context.config.sendgrid.clone();
 
         let http_clone = self.static_context.client_handle.clone();
@@ -72,7 +73,7 @@ where
                     }).and_then(move |text| {
                         let mut send_mail = mail.into_send_mail();
                         send_mail.text = text;
-                        let payload = SendGridPayload::from_send_mail(send_mail, from_email.clone(), TEXT_HTML);
+                        let payload = SendGridPayload::from_send_mail(send_mail, from_email.clone(), from_name.clone(), TEXT_HTML);
                         serde_json::to_string(&payload).map_err(|e| e.context("Couldn't parse payload").into())
                     })
             }).map_err(|e: FailureError| e.context("Mail service, send_email_with_template endpoint error occured.").into())
@@ -105,10 +106,11 @@ where
             api_key,
             send_mail_path,
             from_email,
+            from_name,
         } = self.static_context.config.sendgrid.clone();
         let url = format!("{}/{}", api_addr.clone(), send_mail_path.clone());
 
-        let payload = SendGridPayload::from_send_mail(mail, from_email.clone(), TEXT_PLAIN);
+        let payload = SendGridPayload::from_send_mail(mail, from_email.clone(), from_name.clone(), TEXT_PLAIN);
 
         Box::new(
             serde_json::to_string(&payload)

@@ -16,6 +16,10 @@ pub enum Route {
     PasswordResetForUser,
     ApplyPasswordResetForUser,
     ApplyEmailVerificationForUser,
+    StoreModerationStatusForUser,
+    BaseProductModerationStatusForUser,
+    StoreModerationStatusForModerator,
+    BaseProductModerationStatusForModerator,
     Roles,
     RoleById { id: RoleId },
     RolesByUserId { user_id: UserId },
@@ -43,6 +47,17 @@ pub fn create_route_parser() -> RouteParser<Route> {
     router.add_route(r"^/users/password-reset$", || Route::PasswordResetForUser);
     // ApplyPasswordResetForUser
     router.add_route(r"^/users/apply-password-reset$", || Route::ApplyPasswordResetForUser);
+
+    router.add_route(r"^/users/stores/update-moderation-status$", || Route::StoreModerationStatusForUser);
+    router.add_route(r"^/users/base_products/update-moderation-status", || {
+        Route::BaseProductModerationStatusForUser
+    });
+    router.add_route(r"^/moderators/stores/update-moderation-status$", || {
+        Route::StoreModerationStatusForModerator
+    });
+    router.add_route(r"^/moderators/base_products/update-moderation-status$", || {
+        Route::BaseProductModerationStatusForModerator
+    });
 
     router.add_route(r"^/roles$", || Route::Roles);
 

@@ -156,6 +156,42 @@ impl<
                             .into()
                     }).and_then(move |mail| service.send_email_with_template(TemplateVariant::ApplyPasswordResetForUser, mail)),
             ),
+            // POST /users/stores/update-moderation-status
+            (&Post, Some(Route::StoreModerationStatusForUser)) => serialize_future(
+                parse_body::<StoreModerationStatusForUser>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body failed, target: StoreModerationStatusForUser")
+                            .context(Error::Parse)
+                            .into()
+                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+            ),
+            // POST /users/base_products/update-moderation-status
+            (&Post, Some(Route::BaseProductModerationStatusForUser)) => serialize_future(
+                parse_body::<BaseProductModerationStatusForUser>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body failed, target: BaseProductModerationStatusForUser")
+                            .context(Error::Parse)
+                            .into()
+                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+            ),
+            // POST /moderators/stores/update-moderation-status
+            (&Post, Some(Route::StoreModerationStatusForModerator)) => serialize_future(
+                parse_body::<StoreModerationStatusForModerator>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body failed, target: StoreModerationStatusForModerator")
+                            .context(Error::Parse)
+                            .into()
+                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+            ),
+            // POST /moderators/base_products/update-moderation-status
+            (&Post, Some(Route::BaseProductModerationStatusForModerator)) => serialize_future(
+                parse_body::<BaseProductModerationStatusForModerator>(req.body())
+                    .map_err(|e| {
+                        e.context("Parsing body failed, target: BaseProductModerationStatusForModerator")
+                            .context(Error::Parse)
+                            .into()
+                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+            ),
             (Get, Some(Route::RolesByUserId { user_id })) => serialize_future({ service.get_roles(user_id) }),
             (Post, Some(Route::Roles)) => {
                 serialize_future({ parse_body::<models::NewUserRole>(req.body()).and_then(move |data| service.create_user_role(data)) })

@@ -27,6 +27,7 @@ extern crate uuid;
 #[macro_use]
 extern crate sentry;
 
+#[macro_use]
 extern crate stq_http;
 extern crate stq_logging;
 extern crate stq_router;

@@ -34,5 +34,4 @@ INSERT INTO templates(name, data ) VALUES
     Base product {{store_id}} status has been changed. You can view current store info on <a href="{{cluster_url}}/store/{{store_id}}/products/{{base_product_id}}">this page</a>.  
   </body>
 </html>
-'),
-;
+');

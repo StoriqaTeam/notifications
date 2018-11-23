@@ -103,14 +103,25 @@ impl<
                     }).and_then(move |mail| service.send_email_with_template(TemplateVariant::OrderUpdateStateForStore, mail)),
             ),
             // POST /users/email-verification
-            (&Post, Some(Route::EmailVerificationForUser)) => serialize_future(
-                parse_body::<EmailVerificationForUser>(req.body())
-                    .map_err(|e| {
-                        e.context("Parsing body failed, target: EmailVerificationForUser")
-                            .context(Error::Parse)
-                            .into()
-                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::EmailVerificationForUser, mail)),
-            ),
+            (&Post, Some(Route::EmailVerificationForUser)) => {
+                let project = parse_query!(
+                    req.query().unwrap_or_default(),
+                    "project" => Project
+                );
+                let variant = match project {
+                    Some(Project::Wallet) => TemplateVariant::WalletEmailVerificationForUser,
+                    _ => TemplateVariant::EmailVerificationForUser,
+                };
+
+                serialize_future(
+                    parse_body::<EmailVerificationForUser>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body failed, target: EmailVerificationForUser")
+                                .context(Error::Parse)
+                                .into()
+                        }).and_then(move |mail| service.send_email_with_template(variant, mail)),
+                )
+            },
             // POST /stores/order-create
             (&Post, Some(Route::OrderCreateForStore)) => serialize_future(
                 parse_body::<OrderCreateForStore>(req.body())
@@ -130,32 +141,47 @@ impl<
                     }).and_then(move |mail| service.send_email_with_template(TemplateVariant::OrderCreateForUser, mail)),
             ),
             // POST /users/apply-email-verification
-            (&Post, Some(Route::ApplyEmailVerificationForUser)) => serialize_future(
-                parse_body::<ApplyEmailVerificationForUser>(req.body())
-                    .map_err(|e| {
-                        e.context("Parsing body failed, target: ApplyEmailVerificationForUser")
-                            .context(Error::Parse)
-                            .into()
-                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::ApplyEmailVerificationForUser, mail)),
-            ),
+            (&Post, Some(Route::ApplyEmailVerificationForUser)) => {
+                let project = parse_query!(
+                    req.query().unwrap_or_default(),
+                    "project" => Project
+                );
+                let variant = match project {
+                    Some(Project::Wallet) => TemplateVariant::WalletApplyEmailVerificationForUser,
+                    _ => TemplateVariant::ApplyEmailVerificationForUser,
+                };
+
+                serialize_future(
+                    parse_body::<ApplyEmailVerificationForUser>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body failed, target: ApplyEmailVerificationForUser")
+                                .context(Error::Parse)
+                                .into()
+                        }).and_then(move |mail| service.send_email_with_template(variant, mail)),
+                )
+            }
             // POST /users/password-reset
-            (&Post, Some(Route::PasswordResetForUser)) => serialize_future(
-                parse_body::<PasswordResetForUser>(req.body())
-                    .map_err(|e| {
-                        e.context("Parsing body failed, target: PasswordResetForUser")
-                            .context(Error::Parse)
-                            .into()
-                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::PasswordResetForUser, mail)),
-            ),
-            // POST /users/apply-password-reset
-            (&Post, Some(Route::ApplyPasswordResetForUser)) => serialize_future(
-                parse_body::<ApplyPasswordResetForUser>(req.body())
-                    .map_err(|e| {
-                        e.context("Parsing body failed, target: ApplyPasswordResetForUser")
-                            .context(Error::Parse)
-                            .into()
-                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::ApplyPasswordResetForUser, mail)),
-            ),
+            (&Post, Some(Route::PasswordResetForUser)) => {
+                let project = parse_query!(
+                    req.query().unwrap_or_default(),
+                    "project" => Project
+                );
+                let variant = match project {
+                    Some(Project::Wallet) => TemplateVariant::WalletPasswordResetForUser,
+                    _ => TemplateVariant::PasswordResetForUser,
+                };
+
+
+                serialize_future(
+                    parse_body::<PasswordResetForUser>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body failed, target: PasswordResetForUser")
+                                .context(Error::Parse)
+                                .into()
+                        }).and_then(move |mail| service.send_email_with_template(variant, mail)),
+                )
+            }
+            ,
             // POST /users/stores/update-moderation-status
             (&Post, Some(Route::StoreModerationStatusForUser)) => serialize_future(
                 parse_body::<StoreModerationStatusForUser>(req.body())
@@ -192,6 +218,27 @@ impl<
                             .into()
                     }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
             ),
+            (&Post, Some(Route::ApplyPasswordResetForUser)) => {
+                let project = parse_query!(
+                    req.query().unwrap_or_default(),
+                    "project" => Project
+                );
+                let variant = match project {
+                    Some(Project::Wallet) => TemplateVariant::WalletApplyPasswordResetForUser,
+                    _ => TemplateVariant::ApplyPasswordResetForUser,
+                };
+
+
+                serialize_future(
+                    parse_body::<ApplyPasswordResetForUser>(req.body())
+                        .map_err(|e| {
+                            e.context("Parsing body failed, target: ApplyPasswordResetForUser")
+                                .context(Error::Parse)
+                                .into()
+                        }).and_then(move |mail| service.send_email_with_template(variant, mail)),
+                )
+            }
+            ,
             (Get, Some(Route::RolesByUserId { user_id })) => serialize_future({ service.get_roles(user_id) }),
             (Post, Some(Route::Roles)) => {
                 serialize_future({ parse_body::<models::NewUserRole>(req.body()).and_then(move |data| service.create_user_role(data)) })

@@ -189,7 +189,7 @@ impl<
                         e.context("Parsing body failed, target: StoreModerationStatusForUser")
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::StoreModerationStatusForUser, mail)),
             ),
             // POST /users/base_products/update-moderation-status
             (&Post, Some(Route::BaseProductModerationStatusForUser)) => serialize_future(
@@ -198,7 +198,7 @@ impl<
                         e.context("Parsing body failed, target: BaseProductModerationStatusForUser")
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::BaseProductModerationStatusForUser, mail)),
             ),
             // POST /moderators/stores/update-moderation-status
             (&Post, Some(Route::StoreModerationStatusForModerator)) => serialize_future(
@@ -207,7 +207,7 @@ impl<
                         e.context("Parsing body failed, target: StoreModerationStatusForModerator")
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::StoreModerationStatusForModerator, mail)),
             ),
             // POST /moderators/base_products/update-moderation-status
             (&Post, Some(Route::BaseProductModerationStatusForModerator)) => serialize_future(
@@ -216,7 +216,7 @@ impl<
                         e.context("Parsing body failed, target: BaseProductModerationStatusForModerator")
                             .context(Error::Parse)
                             .into()
-                    }).and_then(move |mail| service.send_mail(mail.into_send_mail())),
+                    }).and_then(move |mail| service.send_email_with_template(TemplateVariant::BaseProductModerationStatusForModerator, mail)),
             ),
             (&Post, Some(Route::ApplyPasswordResetForUser)) => {
                 let project = parse_query!(

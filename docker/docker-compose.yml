@@ -14,8 +14,10 @@ services:
     environment:
       - "DATABASE_URL=postgresql://notifications:notifications@notifications-pg/notifications"
       - "RUST_LOG=notifications=debug"
+    ports:
+      - "8000"
     expose:
-      - 8005
+      - 8000
     stdin_open: true
     depends_on:
       - notifications-pg

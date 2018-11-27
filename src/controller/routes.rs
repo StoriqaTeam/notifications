@@ -24,12 +24,12 @@ pub enum Route {
     RoleById { id: RoleId },
     RolesByUserId { user_id: UserId },
     Templates { template: TemplateVariant },
-    EmarsysCreateContact,
+    EmarsysContact,
 }
 
 pub fn create_route_parser() -> RouteParser<Route> {
     let mut router = RouteParser::default();
-    router.add_route(r"^/emarsys/create-contact$", || Route::EmarsysCreateContact);
+    router.add_route(r"^/emarsys/contact$", || Route::EmarsysContact);
     // Simple Mail
     router.add_route(r"^/simple-mail$", || Route::SimpleMail);
     // OrderUpdateStateForUser

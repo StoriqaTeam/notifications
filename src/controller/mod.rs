@@ -68,7 +68,8 @@ impl<
         let path = req.path().to_string();
 
         let fut = match (&req.method().clone(), self.static_context.route_parser.test(req.path())) {
-            (&Post, Some(Route::EmarsysCreateContact)) => serialize_future(
+            // POST /emarsys/contact
+            (&Post, Some(Route::EmarsysContact)) => serialize_future(
                 parse_body::<models::CreateContactPayload>(req.body())
                     .map_err(|e| e.context("Parsing body failed, target: CreateContactPayload").context(Error::Parse).into())
                     .and_then(move |payload| service.emarsys_create_contact(payload)),

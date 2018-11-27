@@ -1,3 +1,4 @@
+pub mod emarsys;
 pub mod mail;
 pub mod templates;
 pub mod types;

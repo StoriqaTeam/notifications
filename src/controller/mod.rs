@@ -24,6 +24,7 @@ use errors::Error;
 use models;
 use repos::repo_factory::*;
 use sentry_integration::log_and_capture_error;
+use services::emarsys::EmarsysService;
 use services::mail::{MailService, SimpleMailService};
 use services::templates::TemplatesService;
 use services::user_roles::UserRolesService;
@@ -67,6 +68,11 @@ impl<
         let path = req.path().to_string();
 
         let fut = match (&req.method().clone(), self.static_context.route_parser.test(req.path())) {
+            (&Post, Some(Route::EmarsysCreateContact)) => serialize_future(
+                parse_body::<models::CreateContactPayload>(req.body())
+                    .map_err(|e| e.context("Parsing body failed, target: CreateContactPayload").context(Error::Parse).into())
+                    .and_then(move |payload| service.emarsys_create_contact(payload)),
+            ),
             // POST /simple-mail
             (&Post, Some(Route::SimpleMail)) => serialize_future(
                 parse_body::<SimpleMail>(req.body())

@@ -19,13 +19,14 @@ extern crate serde;
 extern crate serde_derive;
 extern crate handlebars;
 extern crate mime;
-extern crate native_tls;
 extern crate serde_json;
 extern crate tokio_core;
 extern crate tokio_signal;
 extern crate uuid;
 #[macro_use]
 extern crate sentry;
+extern crate base64;
+extern crate sha1;
 
 #[macro_use]
 extern crate stq_http;

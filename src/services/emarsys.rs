@@ -40,7 +40,7 @@ where
             .config
             .emarsys
             .clone()
-            .ok_or(format_err!(""))
+            .ok_or(format_err!("Emarsys config not found"))
             .into_future()
             .map(|emarsys_conf| {
                 let signature = Signature::new(emarsys_conf.username_token, emarsys_conf.api_secret_key);

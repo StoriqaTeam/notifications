@@ -16,6 +16,7 @@ pub struct Config {
     pub sendgrid: SendGridConf,
     pub graylog: Option<GrayLogConfig>,
     pub sentry: Option<SentryConfig>,
+    pub emarsys: Option<EmarsysConf>,
 }
 
 /// Common server settings
@@ -44,6 +45,14 @@ pub struct SendGridConf {
     pub send_mail_path: String,
     pub from_email: String,
     pub from_name: String,
+}
+
+/// Emarsys api settings
+#[derive(Debug, Deserialize, Clone)]
+pub struct EmarsysConf {
+    pub api_addr: String,
+    pub username_token: String,
+    pub api_secret_key: String,
 }
 
 /// Creates new app config struct

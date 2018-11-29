@@ -7,3 +7,8 @@ from_name = "Storiqa"
 
 [graylog]
 addr = "udplog.stq.cloud:32303"
+
+[emarsys]
+api_addr = "https://api.emarsys.net/api/v2"
+username_token = "storiqa"
+api_secret_key = "storiqasecret"

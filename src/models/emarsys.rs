@@ -9,10 +9,14 @@ use stq_http::request_util::XWSSE;
 use stq_types::{EmarsysId, UserId};
 
 pub const EMAIL_FIELD: &'static str = "3";
+pub const FIRST_NAME_FIELD: &'static str = "1";
+pub const LAST_NAME_FIELD: &'static str = "2";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateContactPayload {
     pub user_id: UserId,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
     pub email: String,
 }
 
@@ -199,7 +203,11 @@ impl From<CreateContactPayload> for CreateContactRequest {
     fn from(data: CreateContactPayload) -> CreateContactRequest {
         CreateContactRequest {
             key_id: EMAIL_FIELD.to_string(),
-            contacts: vec![serde_json::json!({EMAIL_FIELD: data.email})],
+            contacts: vec![serde_json::json!({
+                FIRST_NAME_FIELD: data.first_name,
+                LAST_NAME_FIELD: data.last_name,
+                EMAIL_FIELD: data.email
+            })],
         }
     }
 }

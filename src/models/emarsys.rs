@@ -9,9 +9,19 @@ use stq_http::request_util::XWSSE;
 use stq_types::{EmarsysId, UserId};
 
 pub const EMAIL_FIELD: &'static str = "3";
+pub const FIRST_NAME_FIELD: &'static str = "1";
+pub const LAST_NAME_FIELD: &'static str = "2";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateContactPayload {
+    pub user_id: UserId,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteContactPayload {
     pub user_id: UserId,
     pub email: String,
 }
@@ -20,6 +30,40 @@ pub struct CreateContactPayload {
 pub struct CreatedContact {
     pub user_id: UserId,
     pub emarsys_id: EmarsysId,
+}
+
+/// delete concat
+/// [https://dev.emarsys.com/v2/contacts/delete-contacts]
+#[derive(Debug, Clone, Deserialize)]
+pub struct DeleteContactResponse {
+    #[serde(rename = "replyCode")]
+    pub reply_code: Option<i64>,
+    /// The summary of the response
+    #[serde(rename = "replyText")]
+    pub reply_text: Option<String>,
+    /// Contains the number of deleted contacts as well as any errors, if applicable.
+    pub data: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AddToContactListRequest {
+    pub key_id: String,
+    pub external_ids: Vec<String>,
+}
+
+/// add concat to contact list api payload
+/// [https://dev.emarsys.com/v2/contact-lists/add-contacts-to-a-contact-list]
+#[derive(Debug, Clone, Deserialize)]
+pub struct AddToContactListResponse {
+    /// The Emarsys response code
+    /// [https://dev.emarsys.com/v2/response-codes/error-codes]
+    #[serde(rename = "replyCode")]
+    pub reply_code: Option<i64>,
+    /// The summary of the response
+    #[serde(rename = "replyText")]
+    pub reply_text: Option<String>,
+    /// The requested data.
+    pub data: Option<AddToContactListResponseData>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -41,6 +85,15 @@ pub struct CreateContactResponse {
     pub reply_text: Option<String>,
     /// The requested data.
     pub data: Option<CreateContactResponseData>,
+}
+
+/// The requested data.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AddToContactListResponseData {
+    /// The number of contacts successfully added to the list.
+    pub inserted_contacts: Option<i32>,
+    /// List of errors during adding to contact list.
+    pub errors: Option<serde_json::Value>,
 }
 
 /// The requested data.
@@ -90,6 +143,27 @@ impl CreateContactResponse {
     }
 }
 
+impl AddToContactListResponse {
+    pub fn extract_inserted_contacts(&self) -> Result<i32, FailureError> {
+        if self.reply_code == Some(0) {
+            let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
+            return data
+                .inserted_contacts
+                .ok_or(format_err!("Expected inserted_contacts to be non-null"));
+        }
+        Err(format_err!("Reply code is not 0"))
+    }
+}
+
+impl DeleteContactResponse {
+    pub fn into_result(&self) -> Result<(), FailureError> {
+        if self.reply_code == Some(0) {
+            return Ok(());
+        }
+        Err(format_err!("Reply code is not 0: {:?}", self))
+    }
+}
+
 impl Signature {
     pub fn new(username_token: String, api_secret_key: String) -> Signature {
         let nonce = Nonce(Uuid::new_v4());
@@ -129,7 +203,20 @@ impl From<CreateContactPayload> for CreateContactRequest {
     fn from(data: CreateContactPayload) -> CreateContactRequest {
         CreateContactRequest {
             key_id: EMAIL_FIELD.to_string(),
-            contacts: vec![serde_json::json!({EMAIL_FIELD: data.email})],
+            contacts: vec![serde_json::json!({
+                FIRST_NAME_FIELD: data.first_name,
+                LAST_NAME_FIELD: data.last_name,
+                EMAIL_FIELD: data.email
+            })],
+        }
+    }
+}
+
+impl AddToContactListRequest {
+    pub fn from_email(email: String) -> AddToContactListRequest {
+        AddToContactListRequest {
+            key_id: EMAIL_FIELD.to_string(),
+            external_ids: vec![email],
         }
     }
 }

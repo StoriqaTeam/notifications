@@ -74,6 +74,12 @@ impl<
                     .map_err(|e| e.context("Parsing body failed, target: CreateContactPayload").context(Error::Parse).into())
                     .and_then(move |payload| service.emarsys_create_contact(payload)),
             ),
+            // DELETE /emarsys/contact
+            (&Delete, Some(Route::EmarsysContact)) => serialize_future(
+                parse_body::<models::DeleteContactPayload>(req.body())
+                    .map_err(|e| e.context("Parsing body failed, target: CreateContactPayload").context(Error::Parse).into())
+                    .and_then(move |payload| service.emarsys_delete_contact(payload)),
+            ),
             // POST /simple-mail
             (&Post, Some(Route::SimpleMail)) => serialize_future(
                 parse_body::<SimpleMail>(req.body())

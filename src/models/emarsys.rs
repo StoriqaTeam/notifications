@@ -17,9 +17,36 @@ pub struct CreateContactPayload {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteContactPayload {
+    pub user_id: UserId,
+    pub email: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreatedContact {
     pub user_id: UserId,
     pub emarsys_id: EmarsysId,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AddToContactListRequest {
+    pub key_id: String,
+    pub external_ids: Vec<String>,
+}
+
+/// add concat to contact list api payload
+/// [https://dev.emarsys.com/v2/contact-lists/add-contacts-to-a-contact-list]
+#[derive(Debug, Clone, Deserialize)]
+pub struct AddToContactListResponse {
+    /// The Emarsys response code
+    /// [https://dev.emarsys.com/v2/response-codes/error-codes]
+    #[serde(rename = "replyCode")]
+    pub reply_code: Option<i64>,
+    /// The summary of the response
+    #[serde(rename = "replyText")]
+    pub reply_text: Option<String>,
+    /// The requested data.
+    pub data: Option<AddToContactListResponseData>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -41,6 +68,15 @@ pub struct CreateContactResponse {
     pub reply_text: Option<String>,
     /// The requested data.
     pub data: Option<CreateContactResponseData>,
+}
+
+/// The requested data.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AddToContactListResponseData {
+    /// The number of contacts successfully added to the list.
+    pub inserted_contacts: Option<i32>,
+    /// List of errors during adding to contact list.
+    pub errors: Option<serde_json::Value>,
 }
 
 /// The requested data.
@@ -90,6 +126,21 @@ impl CreateContactResponse {
     }
 }
 
+impl AddToContactListResponse {
+    pub fn extract_inserted_contacts(&self) -> Result<i32, FailureError> {
+        if self.reply_code == Some(0) {
+            let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
+            if let Some(ref _errors) = data.errors {
+                return Err(format_err!("Response data has errors"));
+            }
+            return data
+                .inserted_contacts
+                .ok_or(format_err!("Expected inserted_contacts to be non-null"));
+        }
+        Err(format_err!("Reply code is not 0"))
+    }
+}
+
 impl Signature {
     pub fn new(username_token: String, api_secret_key: String) -> Signature {
         let nonce = Nonce(Uuid::new_v4());
@@ -130,6 +181,15 @@ impl From<CreateContactPayload> for CreateContactRequest {
         CreateContactRequest {
             key_id: EMAIL_FIELD.to_string(),
             contacts: vec![serde_json::json!({EMAIL_FIELD: data.email})],
+        }
+    }
+}
+
+impl AddToContactListRequest {
+    pub fn from_email(email: String) -> AddToContactListRequest {
+        AddToContactListRequest {
+            key_id: EMAIL_FIELD.to_string(),
+            external_ids: vec![email],
         }
     }
 }

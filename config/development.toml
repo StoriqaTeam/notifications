@@ -12,3 +12,4 @@ addr = "udplog.stq.cloud:32303"
 api_addr = "https://api.emarsys.net/api/v2"
 username_token = "storiqa"
 api_secret_key = "storiqasecret"
+registration_contact_list_id = 1

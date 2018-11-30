@@ -53,6 +53,7 @@ pub struct EmarsysConf {
     pub api_addr: String,
     pub username_token: String,
     pub api_secret_key: String,
+    pub registration_contact_list_id: i64,
 }
 
 /// Creates new app config struct

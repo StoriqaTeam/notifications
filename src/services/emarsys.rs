@@ -14,9 +14,8 @@ use stq_http::request_util::XWSSE;
 use config::EmarsysConf;
 use errors::Error;
 use models::{
-    DeleteContactPayload,
     AddToContactListRequest, AddToContactListResponse, CreateContactPayload, CreateContactRequest, CreateContactResponse, CreatedContact,
-    Signature,
+    DeleteContactPayload, DeleteContactResponse, Signature, EMAIL_FIELD,
 };
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
@@ -33,7 +32,23 @@ where
     F: ReposFactory<T>,
 {
     fn emarsys_delete_contact(&self, payload: DeleteContactPayload) -> ServiceFuture<()> {
-        Box::new(Ok(()).into_future())
+        info!("deleting user {} from emarsys", payload.user_id);
+        let http_clone = self.static_context.client_handle.clone();
+        let user_email = payload.email;
+        let res = self
+            .static_context
+            .config
+            .emarsys
+            .clone()
+            .ok_or(format_err!("Emarsys config not found"))
+            .into_future()
+            .map(move |emarsys_conf| EmarsysClient {
+                config: emarsys_conf,
+                client_handle: http_clone,
+            }).and_then(move |emarsys_client| emarsys_client.delete_contact(user_email))
+            .and_then(|response| response.into_result());
+
+        Box::new(res)
     }
 
     fn emarsys_create_contact(&self, payload: CreateContactPayload) -> ServiceFuture<CreatedContact> {
@@ -73,8 +88,11 @@ where
                             Ok((_response, Ok(inserted_contacts))) => {
                                 info!("Emarsys added {} contacts to contact list", inserted_contacts);
                             }
-                            Ok((response, Err(_))) => {
-                                error!("Emarsys something happend during add to contact list: {:?}", response);
+                            Ok((response, Err(error))) => {
+                                error!(
+                                    "Emarsys something happend during add to contact list: {}, response: {:?}",
+                                    error, response
+                                );
                             }
                             Err(error) => {
                                 error!("Error during add to contact list: {:?}", error);
@@ -150,6 +168,33 @@ impl EmarsysClient {
             .and_then(move |request_body| {
                 client_handle
                     .request::<CreateContactResponse>(Method::Post, url, Some(request_body), Some(headers))
+                    .map_err(|e| e.context(Error::HttpClient).into())
+            })
+    }
+
+    fn delete_contact(self, email: String) -> impl Future<Item = DeleteContactResponse, Error = FailureError> {
+        let signature = Signature::new(self.config.username_token, self.config.api_secret_key);
+        let url = format!("{}/contact/delete", self.config.api_addr);
+
+        let request = serde_json::json!({ EMAIL_FIELD: email });
+
+        debug!(
+            "EmarsysClient delete_contact: url=\"{}\"; signature: {:?}; request: {:?}",
+            url, signature, request
+        );
+
+        let mut headers = Headers::new();
+        headers.set(ContentType(mime::APPLICATION_JSON));
+        let xwsse: XWSSE = signature.into();
+        headers.set(xwsse);
+
+        let client_handle = self.client_handle;
+        serde_json::to_string(&request)
+            .into_future()
+            .map_err(|e| e.context("Couldn't serialize payload").into())
+            .and_then(move |request_body| {
+                client_handle
+                    .request::<DeleteContactResponse>(Method::Post, url, Some(request_body), Some(headers))
                     .map_err(|e| e.context(Error::HttpClient).into())
             })
     }

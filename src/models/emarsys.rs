@@ -28,6 +28,19 @@ pub struct CreatedContact {
     pub emarsys_id: EmarsysId,
 }
 
+/// delete concat
+/// [https://dev.emarsys.com/v2/contacts/delete-contacts]
+#[derive(Debug, Clone, Deserialize)]
+pub struct DeleteContactResponse {
+    #[serde(rename = "replyCode")]
+    pub reply_code: Option<i64>,
+    /// The summary of the response
+    #[serde(rename = "replyText")]
+    pub reply_text: Option<String>,
+    /// Contains the number of deleted contacts as well as any errors, if applicable.
+    pub data: Option<serde_json::Value>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AddToContactListRequest {
     pub key_id: String,
@@ -130,14 +143,20 @@ impl AddToContactListResponse {
     pub fn extract_inserted_contacts(&self) -> Result<i32, FailureError> {
         if self.reply_code == Some(0) {
             let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
-            if let Some(ref _errors) = data.errors {
-                return Err(format_err!("Response data has errors"));
-            }
             return data
                 .inserted_contacts
                 .ok_or(format_err!("Expected inserted_contacts to be non-null"));
         }
         Err(format_err!("Reply code is not 0"))
+    }
+}
+
+impl DeleteContactResponse {
+    pub fn into_result(&self) -> Result<(), FailureError> {
+        if self.reply_code == Some(0) {
+            return Ok(());
+        }
+        Err(format_err!("Reply code is not 0: {:?}", self))
     }
 }
 

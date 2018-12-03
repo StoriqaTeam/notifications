@@ -52,7 +52,8 @@ where
     }
 
     fn emarsys_create_contact(&self, payload: CreateContactPayload) -> ServiceFuture<CreatedContact> {
-        info!("sending user {} to emarsys", payload.user_id);
+        let user_id = payload.user_id;
+        info!("sending user {}, email: {} to emarsys", user_id, payload.email);
         let http_clone = self.static_context.client_handle.clone();
         let user_id = payload.user_id;
         let user_email = payload.email.clone();
@@ -61,7 +62,7 @@ where
             .config
             .emarsys
             .clone()
-            .ok_or(format_err!("Emarsys config not found"))
+            .ok_or(format_err!("Emarsys config not found for user {}", user_id))
             .into_future()
             .map(move |emarsys_conf| EmarsysClient {
                 config: emarsys_conf,
@@ -69,11 +70,16 @@ where
             }).and_then(|emarsys_client| {
                 let request = CreateContactRequest::from(payload);
                 emarsys_client.clone().create_contact(request).map(|r| (emarsys_client, r))
-            }).and_then(|(emarsys_client, response)| {
+            }).and_then(move |(emarsys_client, response)| {
                 response
                     .extract_cteated_id()
-                    .map_err(|e| e.context(format_err!("Emarsys error in response. Response: {:?}", response)).into())
-                    .map(|id| (emarsys_client, id))
+                    .map_err(|e| {
+                        e.context(format_err!(
+                            "Emarsys for user {} error in response. Response: {:?}",
+                            user_id,
+                            response
+                        )).into()
+                    }).map(|id| (emarsys_client, id))
             }).and_then(move |(emarsys_client, emarsys_id)| {
                 info!("Emarsys create contact for {}, trying to add it to contact list", user_id);
                 let request = AddToContactListRequest::from_email(user_email);
@@ -86,16 +92,19 @@ where
                     }).then(move |res| {
                         match res {
                             Ok((_response, Ok(inserted_contacts))) => {
-                                info!("Emarsys added {} contacts to contact list", inserted_contacts);
+                                info!(
+                                    "Emarsys for user {} added {} contact(s) to contact list",
+                                    user_id, inserted_contacts
+                                );
                             }
                             Ok((response, Err(error))) => {
                                 error!(
-                                    "Emarsys something happend during add to contact list: {}, response: {:?}",
-                                    error, response
+                                    "Emarsys for user {} something happend during add to contact list: {}, response: {:?}",
+                                    user_id, error, response
                                 );
                             }
                             Err(error) => {
-                                error!("Error during add to contact list: {:?}", error);
+                                error!("Error for user {} during add to contact list: {:?}", user_id, error);
                             }
                         }
                         Ok(emarsys_id)

@@ -6,7 +6,7 @@ use sha1::{Digest, Sha1};
 use uuid::Uuid;
 
 use stq_http::request_util::XWSSE;
-use stq_types::{EmarsysId, UserId};
+use stq_types::{Alpha3, EmarsysId, UserId};
 
 pub const EMAIL_FIELD: &'static str = "3";
 pub const FIRST_NAME_FIELD: &'static str = "1";
@@ -19,7 +19,7 @@ pub struct CreateContactPayload {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub email: String,
-    pub country: Option<String>,
+    pub country: Option<Alpha3>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -263,8 +263,8 @@ impl fmt::Display for Nonce {
 }
 
 /// [https://help.emarsys.com/hc/en-us/articles/115004634749-single-choice-fields-and-their-values]
-fn get_country_code(country: &str) -> Option<i32> {
-    match country {
+fn get_country_code(country: &Alpha3) -> Option<i32> {
+    match country.0.as_ref() {
         "AFG" => Some(1),
         "ALB" => Some(2),
         "DZA" => Some(3),

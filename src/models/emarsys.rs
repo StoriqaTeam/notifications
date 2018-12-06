@@ -8,10 +8,14 @@ use uuid::Uuid;
 use stq_http::request_util::XWSSE;
 use stq_types::{Alpha3, EmarsysId, UserId};
 
+/// system fields
+/// [https://dev.emarsys.com/v2/personalization/contact-system-fields]
 pub const EMAIL_FIELD: &'static str = "3";
 pub const FIRST_NAME_FIELD: &'static str = "1";
 pub const LAST_NAME_FIELD: &'static str = "2";
 pub const COUNTRY_FIELD: &'static str = "14";
+pub const OPT_IN: &'static str = "31";
+pub const OPT_IN_TRUE: i32 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateContactPayload {
@@ -210,6 +214,7 @@ impl From<CreateContactPayload> for CreateContactRequest {
                 LAST_NAME_FIELD: data.last_name,
                 EMAIL_FIELD: data.email,
                 COUNTRY_FIELD: data.country.and_then(|country| get_country_code(&country)),
+                OPT_IN: OPT_IN_TRUE,
             })],
         }
     }

@@ -1,3 +1,5 @@
+use std::iter::Iterator;
+
 use models::emarsys::CreateContactRequest;
 use services::types::ServiceFuture;
 use models::emarsys::DeleteContactResponse;
@@ -7,18 +9,51 @@ use services::emarsys::EmarsysClient;
 use models::emarsys::EMAIL_FIELD;
 use models::emarsys::AddToContactListRequest;
 use models::emarsys::CreateContactResponse;
+use serde_json::Value as JsonValue;
+
+#[derive(Clone)]
+pub struct Field {
+    key: String,
+    value: String
+}
+
+impl Field {
+    pub fn new(key: String, value: String) -> Field {
+        Field {
+            key,
+            value
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ContactMockData {
+    key_field: Field,
+    new_field: Field,
+    source_id: i64
+}
+
+impl ContactMockData {
+    pub fn new(key_field: Field, new_field: Field, source_id: i64) -> ContactMockData {
+        ContactMockData {
+            key_field,
+            new_field,
+            source_id
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct ContactMock {
     id: i64,
-    email: String
+    data: ContactMockData
 }
 
 impl ContactMock {
-    pub fn new(id: i64, email: String) -> ContactMock {
+    pub fn new(id: i64, data: ContactMockData) -> ContactMock {
         ContactMock {
             id,
-            email
+            data
         }
     }
 }
@@ -62,10 +97,22 @@ impl<T: Clone> Counter<T> {
         cnt
     }
 
-    pub fn push_with_id(mut self, f: impl Fn(i64) -> T) -> T {
+    pub fn push_with_id(mut self, f: impl FnOnce(i64) -> T) -> T {
         let elem = f(self.inc());
         self.value.push(elem.clone());
         elem
+    }
+
+    pub fn push_multiple_with_ids(mut self, fs: Vec<impl FnOnce(i64) -> T>) -> Vec<T> {
+        let mut result = vec![];
+
+        for f in fs {
+            let elem = f(self.inc());
+            self.value.push(elem.clone());
+            result.push(elem);
+        }
+
+        result
     }
 }
 
@@ -83,8 +130,15 @@ impl EmarsysClientMock {
         }
     }
 
-    pub fn create_contact(self, email: String) -> ContactMock {
-        self.contacts.push_with_id(|id| ContactMock::new(id, email.clone()))
+    pub fn create_multiple_contacts(self, key_id: String, contacts: Vec<ContactMockData>) -> Vec<ContactMock> {
+        self.contacts.push_multiple_with_ids(
+            contacts.iter()
+                .map(|data| {
+                    let d = data.clone();
+                    |id| ContactMock::new(id, d)
+                })
+                .collect()
+        )
     }
 
     pub fn create_contact_list(self) -> ContactListMock {
@@ -94,18 +148,16 @@ impl EmarsysClientMock {
     pub fn find_contact_list(&mut self, contact_list_id: i64) -> Option<&mut ContactListMock> {
         self.contact_lists.value.iter_mut()
             .find(|x| x.id == contact_list_id)
-//            .map(|x| x.clone())
     }
 
     pub fn find_contacts(&self, key_id: String, external_ids: Vec<String>) -> Vec<ContactMock> {
-        if key_id == EMAIL_FIELD {
-            self.contacts.value.iter()
-                .filter(|x| external_ids.contains(&x.email))
-                .map(|x| x.clone())
-                .collect()
-        } else {
-            unimplemented!()
-        }
+        self.contacts.value.iter()
+            .filter(|&x| {
+                let contact = x.clone();
+                contact.data.key_field.key == key_id && external_ids.contains(&contact.data.key_field.value)
+            })
+            .map(|x| x.clone())
+            .collect()
     }
 }
 
@@ -140,7 +192,46 @@ impl EmarsysClient for EmarsysClientMock {
         }
     }
 
-    fn create_contact(self, _request: CreateContactRequest) -> ServiceFuture<CreateContactResponse> {
+    fn create_contact(
+        self,
+        request: CreateContactRequest
+    ) -> ServiceFuture<CreateContactResponse> {
+        self.create_multiple_contacts(request.clone().key_id, request.contacts.iter().map(|v| {
+            if let JsonValue::Object(m) = v {
+                let mut keys: Vec<String> = vec![];
+
+                for key in m.keys() {
+                    keys.push(key.clone());
+                }
+
+                let new_field_key_option = keys.iter().find(|&x| {
+                    let key = x.clone();
+                    key != request.clone().key_id && key != "source_id".to_string()
+                });
+
+                let source_id_option = v.get("source_id");
+                let key_field_option = v.get(request.clone().key_id);
+
+                // TODO: PLEASE REWRITE ME!!!
+                if let Some(new_field_key) = new_field_key_option {
+                    if let Some(JsonValue::String(new_field)) = v.get(new_field_key.clone()) {
+                        if let Some(JsonValue::Number(source_id)) = source_id_option {
+                            if let Some(JsonValue::String(key_field)) = key_field_option {
+                                ContactMockData::new(
+                                    Field::new(request.clone().key_id, key_field.clone()),
+                                    Field::new("".to_string(), new_field.clone()),
+
+                                    // TODO: rewrite without `.unwrap()`.
+                                    source_id.as_i64().unwrap()
+                                )
+                            } else { unimplemented!()}
+                        } else { unimplemented!() }
+                    } else { unimplemented!() }
+                } else { unimplemented!() }
+            } else {
+                unimplemented!()
+            }
+        }).collect());
         unimplemented!()
     }
 

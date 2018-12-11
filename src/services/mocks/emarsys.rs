@@ -10,6 +10,8 @@ use models::emarsys::EMAIL_FIELD;
 use models::emarsys::AddToContactListRequest;
 use models::emarsys::CreateContactResponse;
 use serde_json::Value as JsonValue;
+use models::emarsys::CreateContactResponseData;
+use futures::Future;
 
 #[derive(Clone)]
 pub struct Field {
@@ -196,7 +198,7 @@ impl EmarsysClient for EmarsysClientMock {
         self,
         request: CreateContactRequest
     ) -> ServiceFuture<CreateContactResponse> {
-        self.create_multiple_contacts(request.clone().key_id, request.contacts.iter().map(|v| {
+        let contacts = self.create_multiple_contacts(request.clone().key_id, request.contacts.iter().map(|v| {
             if let JsonValue::Object(m) = v {
                 let mut keys: Vec<String> = vec![];
 
@@ -219,7 +221,7 @@ impl EmarsysClient for EmarsysClientMock {
                             if let Some(JsonValue::String(key_field)) = key_field_option {
                                 ContactMockData::new(
                                     Field::new(request.clone().key_id, key_field.clone()),
-                                    Field::new("".to_string(), new_field.clone()),
+                                    Field::new(new_field_key.clone(), new_field.clone()),
 
                                     // TODO: rewrite without `.unwrap()`.
                                     source_id.as_i64().unwrap()
@@ -232,10 +234,68 @@ impl EmarsysClient for EmarsysClientMock {
                 unimplemented!()
             }
         }).collect());
-        unimplemented!()
+
+        let ids = contacts.iter().map(|c| c.id as i32).collect();
+
+        Box::new(
+            futures::future::ok(CreateContactResponse {
+                reply_code: Some(0),
+                reply_text: None,   // TODO?
+                data: Some(CreateContactResponseData {
+                    ids: Some(ids),
+                    errors: None
+                })
+            })
+        )
     }
 
-    fn delete_contact(self, _email: String) -> ServiceFuture<DeleteContactResponse> {
+    fn delete_contact(self, email: String) -> ServiceFuture<DeleteContactResponse> {
         unimplemented!()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use models::emarsys::CreateContactRequest;
+    use super::*;
+
+    #[test]
+    fn create_contact() {
+        let emarsys = EmarsysClientMock::new();
+        let user_data = serde_json::from_str(
+            r#"
+            {
+                "3": "foo@bar.baz",
+                "1": "John",
+                "source_id": 42
+            }
+            "#).unwrap();   // TODO: without unwrap.
+        let request = CreateContactRequest {
+            key_id: EMAIL_FIELD.to_string(),
+            contacts: vec![
+                user_data
+            ],
+        };
+        let response = emarsys.create_contact(request).wait();
+        panic!("::: {:?} :::", response);
+        // TODO: check response.
+    }
+
+//    #[test]
+//    fn delete_contact() {
+//        let emarsys: EmarsysClient = EmarsysClientMock::new();
+//        let request = ();
+//        let response = block_on(emarsys.delete_contact(request));
+//        // TODO: check response.
+//    }
+
+//    #[test]
+//    fn add_contact_to_contact_list() {
+//        let emarsys = EmarsysClientMock::new();
+//        let contact_list_id = emarsys.create_contact_list().id;
+//        let emarsys = emarsys as EmarsysClient;
+//        let request = ();
+//        let response = block_on(emarsys.add_to_contact_list(request));
+//        // TODO: check response.
+//    }
 }

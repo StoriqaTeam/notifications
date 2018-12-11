@@ -127,7 +127,6 @@ pub trait EmarsysClient {
         request: AddToContactListRequest
     ) -> ServiceFuture<AddToContactListResponse>;
 
-    // TODO: maybe rename to `create_contacts`?
     fn create_contact(
         self,
         request: CreateContactRequest

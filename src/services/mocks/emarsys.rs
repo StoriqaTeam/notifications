@@ -13,6 +13,8 @@ use serde_json::Value as JsonValue;
 use models::emarsys::CreateContactResponseData;
 use futures::Future;
 use serde_json::Map;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Field {
@@ -64,7 +66,7 @@ impl ContactMock {
 #[derive(Clone)]
 pub struct ContactListMock {
     id: i64,
-    contacts: Vec<ContactMock>,
+    contacts: Vec<Rc<ContactMock>>,
 }
 
 impl ContactListMock {
@@ -75,7 +77,7 @@ impl ContactListMock {
         }
     }
 
-    pub fn add_contact(&mut self, contact: ContactMock) {
+    pub fn add_contact(&mut self, contact: Rc<ContactMock>) {
         self.contacts.push(contact);
     }
 }
@@ -83,7 +85,7 @@ impl ContactListMock {
 #[derive(Clone)]
 struct Counter<T: Clone> {
     id: i64,
-    value: Vec<T>,
+    value: Vec<Rc<T>>,
 }
 
 impl<T: Clone> Counter<T> {
@@ -100,17 +102,17 @@ impl<T: Clone> Counter<T> {
         cnt
     }
 
-    pub fn push_with_id(mut self, f: impl FnOnce(i64) -> T) -> T {
-        let elem = f(self.inc());
+    pub fn push_with_id(&mut self, f: impl FnOnce(i64) -> T) -> Rc<T> {
+        let elem = Rc::new(f(self.inc()));
         self.value.push(elem.clone());
         elem
     }
 
-    pub fn push_multiple_with_ids(mut self, fs: Vec<impl FnOnce(i64) -> T>) -> Vec<T> {
+    pub fn push_multiple_with_ids(&mut self, fs: Vec<impl FnOnce(i64) -> T>) -> Vec<Rc<T>> {
         let mut result = vec![];
 
         for f in fs {
-            let elem = f(self.inc());
+            let elem = Rc::new(f(self.inc()));
             self.value.push(elem.clone());
             result.push(elem);
         }
@@ -121,21 +123,23 @@ impl<T: Clone> Counter<T> {
 
 #[derive(Clone)]
 struct EmarsysClientMock {
-    contacts: Counter<ContactMock>,
-    contact_lists: Counter<ContactListMock>,
+    contacts: RefCell<Counter<ContactMock>>,
+    contact_lists: RefCell<Counter<ContactListMock>>,
 }
 
 impl EmarsysClientMock {
     pub fn new() -> EmarsysClientMock {
         EmarsysClientMock {
-            contacts: Counter::new(),
-            contact_lists: Counter::new(),
+            contacts: RefCell::new(Counter::new()),
+            contact_lists: RefCell::new(Counter::new()),
         }
     }
 
-    pub fn create_multiple_contacts(self, key_id: String, contacts: Vec<ContactMockData>) -> Vec<ContactMock> {
-        self.contacts.push_multiple_with_ids(
-            contacts.iter()
+    pub fn create_multiple_contacts(&self, key_id: String, new_contacts: Vec<ContactMockData>) -> Vec<Rc<ContactMock>> {
+        let mut contacts = self.contacts.borrow_mut();
+
+        contacts.push_multiple_with_ids(
+            new_contacts.iter()
                 .map(|data| {
                     let d = data.clone();
                     |id| ContactMock::new(id, d)
@@ -144,9 +148,11 @@ impl EmarsysClientMock {
         )
     }
 
-    pub fn delete_contacts(mut self, email: String) -> Vec<i64> {
+    pub fn delete_contacts(&self, email: String) -> Vec<i64> {
         let mut deleted_ids = vec![];
-        self.contacts.value.retain(|c| {
+        let mut contacts = self.contacts.borrow_mut();
+
+        contacts.value.retain(|c| {
             let delete = c.data.key_field.key == EMAIL_FIELD && c.data.key_field.value == email;
             if delete { deleted_ids.push(c.id) }
             delete
@@ -155,17 +161,25 @@ impl EmarsysClientMock {
         deleted_ids
     }
 
-    pub fn create_contact_list(self) -> ContactListMock {
-        self.contact_lists.push_with_id(|id| ContactListMock::new(id))
+    pub fn create_contact_list(&self) -> Rc<ContactListMock> {
+        let mut contact_lists = self.contact_lists.borrow_mut();
+        contact_lists.push_with_id(
+            |id| ContactListMock::new(id)
+        )
     }
 
-    pub fn find_contact_list(&mut self, contact_list_id: i64) -> Option<&mut ContactListMock> {
-        self.contact_lists.value.iter_mut()
+    pub fn find_contact_list(&self, contact_list_id: i64) -> Option<Rc<ContactListMock>> {
+        let mut contact_lists = self.contact_lists.borrow_mut();
+
+        contact_lists.value.iter_mut()
             .find(|x| x.id == contact_list_id)
+            .map(|x| x.clone())
     }
 
-    pub fn find_contacts(&self, key_id: String, external_ids: Vec<String>) -> Vec<ContactMock> {
-        self.contacts.value.iter()
+    pub fn find_contacts(&self, key_id: String, external_ids: Vec<String>) -> Vec<Rc<ContactMock>> {
+        let mut contacts = self.contacts.borrow_mut();
+
+        contacts.value.iter()
             .filter(|&x| {
                 let contact = x.clone();
                 contact.data.key_field.key == key_id && external_ids.contains(&contact.data.key_field.value)
@@ -177,16 +191,16 @@ impl EmarsysClientMock {
 
 impl EmarsysClient for EmarsysClientMock {
     fn add_to_contact_list(
-        mut self,
+        &self,
         contact_list_id: i64,
         request: AddToContactListRequest,
     ) -> ServiceFuture<AddToContactListResponse> {
         let contacts = self.find_contacts(request.key_id, request.external_ids);
-        let mut contact_list_option = self.find_contact_list(contact_list_id);
+        let contact_list_option = self.find_contact_list(contact_list_id);
 
         if let Some(mut contact_list) = contact_list_option {
             for contact in contacts {
-                contact_list.add_contact(contact.clone())
+                Rc::make_mut(&mut contact_list).add_contact(contact.clone())
             }
 
             Box::new(futures::future::ok(
@@ -207,7 +221,7 @@ impl EmarsysClient for EmarsysClientMock {
     }
 
     fn create_contact(
-        self,
+        &self,
         request: CreateContactRequest,
     ) -> ServiceFuture<CreateContactResponse> {
         let contacts = self.create_multiple_contacts(request.clone().key_id, request.contacts.iter().map(|v| {
@@ -261,7 +275,7 @@ impl EmarsysClient for EmarsysClientMock {
         )
     }
 
-    fn delete_contact(self, email: String) -> ServiceFuture<DeleteContactResponse> {
+    fn delete_contact(&self, email: String) -> ServiceFuture<DeleteContactResponse> {
         let ids = self.delete_contacts(email);
 
         let mut data_map = Map::new();
@@ -279,8 +293,10 @@ impl EmarsysClient for EmarsysClientMock {
 
 #[cfg(test)]
 mod tests {
-    use models::emarsys::CreateContactRequest;
     use super::*;
+    use models::emarsys::*;
+
+    static EMAIL: &'static str = "foo@bar.baz";
 
     #[test]
     fn create_contact() {
@@ -304,21 +320,43 @@ mod tests {
         // TODO: check response.
     }
 
-//    #[test]
-//    fn delete_contact() {
-//        let emarsys: EmarsysClient = EmarsysClientMock::new();
-//        let request = ();
-//        let response = block_on(emarsys.delete_contact(request));
-//        // TODO: check response.
-//    }
+    #[test]
+    fn delete_contact() {
+        let emarsys = EmarsysClientMock::new();
+        let email = "foo@bar.baz".to_string();
+        emarsys.create_multiple_contacts(EMAIL_FIELD.to_string(), vec![ContactMockData::new(
+            Field::new(EMAIL_FIELD.to_string(), email.clone()),
+            Field::new(FIRST_NAME_FIELD.to_string(), "John".to_string()),
+            42
+        )]);
+        emarsys.create_multiple_contacts(EMAIL_FIELD.to_string(), vec![ContactMockData::new(
+            Field::new(EMAIL_FIELD.to_string(), email.clone()),
+            Field::new(FIRST_NAME_FIELD.to_string(), "John".to_string()),
+            42
+        )]);
+
+        let response = emarsys.delete_contact(email.clone()).wait()
+            .expect("API request failed");
+
+        let data = response.data.clone().expect("Response `data` field is missing");
+        if let JsonValue::Object(map) = data {
+            let deleted_contacts = map.get("deleted_contacts")
+                .expect("Response `data.deleted_contacts` field is missing");
+            assert_eq!(deleted_contacts, 2);
+        } else {
+            panic!("Response `data` field is not an object");
+        }
+    }
 
 //    #[test]
 //    fn add_contact_to_contact_list() {
 //        let emarsys = EmarsysClientMock::new();
 //        let contact_list_id = emarsys.create_contact_list().id;
-//        let emarsys = emarsys as EmarsysClient;
-//        let request = ();
-//        let response = block_on(emarsys.add_to_contact_list(request));
-//        // TODO: check response.
+//        let request = AddToContactListRequest {
+//            key_id: EMAIL_FIELD.to_string(),
+//            external_ids:
+//        };
+//        let response = emarsys.add_to_contact_list(request).wait();
+////        // TODO: check response.
 //    }
 }

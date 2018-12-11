@@ -12,18 +12,19 @@ use models::emarsys::CreateContactResponse;
 use serde_json::Value as JsonValue;
 use models::emarsys::CreateContactResponseData;
 use futures::Future;
+use serde_json::Map;
 
 #[derive(Clone)]
 pub struct Field {
     key: String,
-    value: String
+    value: String,
 }
 
 impl Field {
     pub fn new(key: String, value: String) -> Field {
         Field {
             key,
-            value
+            value,
         }
     }
 }
@@ -32,7 +33,7 @@ impl Field {
 pub struct ContactMockData {
     key_field: Field,
     new_field: Field,
-    source_id: i64
+    source_id: i64,
 }
 
 impl ContactMockData {
@@ -40,7 +41,7 @@ impl ContactMockData {
         ContactMockData {
             key_field,
             new_field,
-            source_id
+            source_id,
         }
     }
 }
@@ -48,14 +49,14 @@ impl ContactMockData {
 #[derive(Clone)]
 pub struct ContactMock {
     id: i64,
-    data: ContactMockData
+    data: ContactMockData,
 }
 
 impl ContactMock {
     pub fn new(id: i64, data: ContactMockData) -> ContactMock {
         ContactMock {
             id,
-            data
+            data,
         }
     }
 }
@@ -63,14 +64,14 @@ impl ContactMock {
 #[derive(Clone)]
 pub struct ContactListMock {
     id: i64,
-    contacts: Vec<ContactMock>
+    contacts: Vec<ContactMock>,
 }
 
 impl ContactListMock {
     pub fn new(id: i64) -> ContactListMock {
         ContactListMock {
             id,
-            contacts: vec![]
+            contacts: vec![],
         }
     }
 
@@ -82,14 +83,14 @@ impl ContactListMock {
 #[derive(Clone)]
 struct Counter<T: Clone> {
     id: i64,
-    value: Vec<T>
+    value: Vec<T>,
 }
 
 impl<T: Clone> Counter<T> {
     pub fn new() -> Counter<T> {
         Counter {
             id: 0,
-            value: vec![]
+            value: vec![],
         }
     }
 
@@ -128,7 +129,7 @@ impl EmarsysClientMock {
     pub fn new() -> EmarsysClientMock {
         EmarsysClientMock {
             contacts: Counter::new(),
-            contact_lists: Counter::new()
+            contact_lists: Counter::new(),
         }
     }
 
@@ -141,6 +142,17 @@ impl EmarsysClientMock {
                 })
                 .collect()
         )
+    }
+
+    pub fn delete_contacts(mut self, email: String) -> Vec<i64> {
+        let mut deleted_ids = vec![];
+        self.contacts.value.retain(|c| {
+            let delete = c.data.key_field.key == EMAIL_FIELD && c.data.key_field.value == email;
+            if delete { deleted_ids.push(c.id) }
+            delete
+        });
+
+        deleted_ids
     }
 
     pub fn create_contact_list(self) -> ContactListMock {
@@ -167,7 +179,7 @@ impl EmarsysClient for EmarsysClientMock {
     fn add_to_contact_list(
         mut self,
         contact_list_id: i64,
-        request: AddToContactListRequest
+        request: AddToContactListRequest,
     ) -> ServiceFuture<AddToContactListResponse> {
         let contacts = self.find_contacts(request.key_id, request.external_ids);
         let mut contact_list_option = self.find_contact_list(contact_list_id);
@@ -183,8 +195,8 @@ impl EmarsysClient for EmarsysClientMock {
                     reply_text: None,       // TODO: return something?
                     data: Some(AddToContactListResponseData {
                         inserted_contacts: Some(contact_list.contacts.len() as i32),
-                        errors: None
-                    })
+                        errors: None,
+                    }),
                 }
             ))
         } else {
@@ -196,7 +208,7 @@ impl EmarsysClient for EmarsysClientMock {
 
     fn create_contact(
         self,
-        request: CreateContactRequest
+        request: CreateContactRequest,
     ) -> ServiceFuture<CreateContactResponse> {
         let contacts = self.create_multiple_contacts(request.clone().key_id, request.contacts.iter().map(|v| {
             if let JsonValue::Object(m) = v {
@@ -224,9 +236,9 @@ impl EmarsysClient for EmarsysClientMock {
                                     Field::new(new_field_key.clone(), new_field.clone()),
 
                                     // TODO: rewrite without `.unwrap()`.
-                                    source_id.as_i64().unwrap()
+                                    source_id.as_i64().unwrap(),
                                 )
-                            } else { unimplemented!()}
+                            } else { unimplemented!() }
                         } else { unimplemented!() }
                     } else { unimplemented!() }
                 } else { unimplemented!() }
@@ -243,14 +255,25 @@ impl EmarsysClient for EmarsysClientMock {
                 reply_text: None,   // TODO?
                 data: Some(CreateContactResponseData {
                     ids: Some(ids),
-                    errors: None
-                })
+                    errors: None,
+                }),
             })
         )
     }
 
     fn delete_contact(self, email: String) -> ServiceFuture<DeleteContactResponse> {
-        unimplemented!()
+        let ids = self.delete_contacts(email);
+
+        let mut data_map = Map::new();
+        data_map.insert("deleted_contacts".to_string(), JsonValue::Number(ids.len().into()));
+
+        Box::new(
+            futures::future::ok(DeleteContactResponse {
+                reply_code: Some(0),
+                reply_text: Some("OK".to_string()),   // TODO?
+                data: Some(JsonValue::Object(data_map))
+            })
+        )
     }
 }
 

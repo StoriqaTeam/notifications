@@ -33,9 +33,9 @@ impl Field {
 
 #[derive(Clone)]
 pub struct ContactMockData {
-    key_field: Field,
-    new_field: Field,
-    source_id: i64,
+    pub key_field: Field,
+    pub new_field: Field,
+    pub source_id: i64,
 }
 
 impl ContactMockData {
@@ -296,19 +296,52 @@ mod tests {
     use super::*;
     use models::emarsys::*;
 
-    static EMAIL: &'static str = "foo@bar.baz";
+    static EMAIL_1: &'static str = "bonnie@storiqa.com";
+    static EMAIL_2: &'static str = "clyde@storiqa.com";
+    static FIRST_NAME_1: &'static str = "Bonnie";
+    static FIRST_NAME_2: &'static str = "Clyde";
+    static SOURCE_ID_1: i64 = 42;
+    static SOURCE_ID_2: i64 = 666;
+
+    fn create_contact_value(
+        email: impl Into<String>, first_name: impl Into<String>, source_id: impl Into<i64>
+    ) -> JsonValue {
+        let json = format!(
+            r#"
+            {{
+                "{email_field}": "{email}",
+                "{first_name_field}": "{first_name}",
+                "source_id": {source_id}
+            }}
+            "#,
+            email_field=EMAIL_FIELD,
+            email=email.into(),
+            first_name_field=FIRST_NAME_FIELD,
+            first_name=first_name.into(),
+            source_id=source_id.into()
+        );
+
+        serde_json::from_str(json.as_str()).unwrap()
+    }
+
+    fn create_contact_data(
+        email: impl Into<String>, first_name: impl Into<String>, source_id: impl Into<i64>
+    ) -> ContactMockData {
+        ContactMockData::new(
+            Field::new(EMAIL_FIELD.into(), email.into()),
+            Field::new(FIRST_NAME_FIELD.into(), first_name.into()),
+            source_id.into()
+        )
+    }
 
     #[test]
-    fn create_contact() {
+    fn create_contact_test() {
         let emarsys = EmarsysClientMock::new();
-        let user_data = serde_json::from_str(
-            r#"
-            {
-                "3": "foo@bar.baz",
-                "1": "John",
-                "source_id": 42
-            }
-            "#).unwrap();   // TODO: without unwrap.
+        let user_data = create_contact_value(
+            EMAIL_1,
+            FIRST_NAME_1,
+            SOURCE_ID_1
+        );
         let request = CreateContactRequest {
             key_id: EMAIL_FIELD.to_string(),
             contacts: vec![
@@ -316,47 +349,55 @@ mod tests {
             ],
         };
         let response = emarsys.create_contact(request).wait();
-        panic!("::: {:?} :::", response);
+//        panic!("::: {:?} :::", response);
         // TODO: check response.
     }
 
     #[test]
-    fn delete_contact() {
+    fn delete_contact_test() {
         let emarsys = EmarsysClientMock::new();
-        let email = "foo@bar.baz".to_string();
-        emarsys.create_multiple_contacts(EMAIL_FIELD.to_string(), vec![ContactMockData::new(
-            Field::new(EMAIL_FIELD.to_string(), email.clone()),
-            Field::new(FIRST_NAME_FIELD.to_string(), "John".to_string()),
-            42
-        )]);
-        emarsys.create_multiple_contacts(EMAIL_FIELD.to_string(), vec![ContactMockData::new(
-            Field::new(EMAIL_FIELD.to_string(), email.clone()),
-            Field::new(FIRST_NAME_FIELD.to_string(), "John".to_string()),
-            42
-        )]);
+        let contacts = vec![
+            create_contact_data(EMAIL_1, FIRST_NAME_1, SOURCE_ID_1),
+            create_contact_data(EMAIL_2, FIRST_NAME_2, SOURCE_ID_2)
+        ];
+        emarsys.create_multiple_contacts(EMAIL_FIELD.to_string(), contacts);
 
-        let response = emarsys.delete_contact(email.clone()).wait()
+        let response = emarsys.delete_contact(EMAIL_1.into()).wait()
             .expect("API request failed");
 
         let data = response.data.clone().expect("Response `data` field is missing");
         if let JsonValue::Object(map) = data {
             let deleted_contacts = map.get("deleted_contacts")
                 .expect("Response `data.deleted_contacts` field is missing");
-            assert_eq!(deleted_contacts, 2);
+            assert_eq!(deleted_contacts, 1);
         } else {
             panic!("Response `data` field is not an object");
         }
     }
 
-//    #[test]
-//    fn add_contact_to_contact_list() {
-//        let emarsys = EmarsysClientMock::new();
-//        let contact_list_id = emarsys.create_contact_list().id;
-//        let request = AddToContactListRequest {
-//            key_id: EMAIL_FIELD.to_string(),
-//            external_ids:
-//        };
-//        let response = emarsys.add_to_contact_list(request).wait();
-////        // TODO: check response.
-//    }
+    #[test]
+    fn add_contact_to_contact_list_test() {
+        let emarsys = EmarsysClientMock::new();
+        let contacts = vec![
+            create_contact_data(EMAIL_1, FIRST_NAME_1, SOURCE_ID_1),
+            create_contact_data(EMAIL_2, FIRST_NAME_2, SOURCE_ID_2)
+        ];
+        emarsys.create_multiple_contacts(EMAIL_FIELD.to_string(), contacts.clone());
+
+        let contact_list_id = emarsys.create_contact_list().id;
+
+        let request = AddToContactListRequest {
+            key_id: EMAIL_FIELD.into(),
+            external_ids: vec![EMAIL_1.into(), EMAIL_2.into()]
+        };
+        let response = emarsys.add_to_contact_list(contact_list_id, request).wait()
+            .expect("API request failed");
+
+        let data = response.data.clone()
+            .expect("Response `data` field is missing");
+
+        let inserted_contacts = data.inserted_contacts
+            .expect("Response `data.deleted_contacts` field is missing");
+        assert_eq!(inserted_contacts, contacts.len() as i32);
+    }
 }

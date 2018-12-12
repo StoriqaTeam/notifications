@@ -87,13 +87,12 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     // Repo factory
     let repo_factory = ReposFactoryImpl::new(roles_cache.clone());
 
-    // TODO.
-
     let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
     let client_handle = client.handle();
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
+    // TODO: replace with mock implementation if needed.
     let emarsys_client = config.emarsys.clone()
         .map(|emarsys_conf| EmarsysClientImpl {
             config: emarsys_conf,

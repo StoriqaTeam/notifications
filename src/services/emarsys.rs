@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
@@ -20,7 +18,6 @@ use models::{
 };
 use repos::ReposFactory;
 use services::types::{Service, ServiceFuture};
-use models::emarsys::AddToContactListResponseData;
 
 pub trait EmarsysService {
     fn emarsys_create_contact(&self, payload: CreateContactPayload) -> ServiceFuture<CreatedContact>;
@@ -35,7 +32,6 @@ where
 {
     fn emarsys_delete_contact(&self, payload: DeleteContactPayload) -> ServiceFuture<()> {
         info!("deleting user {} from emarsys", payload.user_id);
-        let http_clone = self.static_context.client_handle.clone();
         let user_email = payload.email;
         Box::new(
             self

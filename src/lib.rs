@@ -60,7 +60,7 @@ use stq_http::controller::Application;
 use controller::context::StaticContext;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
-use services::emarsys::{EmarsysClient, EmarsysClientImpl};
+use services::emarsys::EmarsysClientImpl;
 
 /// Starts new web service from provided `Config`
 pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option<i32>, callback: F) {
@@ -92,7 +92,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
-    // TODO: replace with mock implementation if needed.
+    // TODO: Replace with mock implementation if needed.
     let emarsys_client = config.emarsys.clone()
         .map(|emarsys_conf| EmarsysClientImpl {
             config: emarsys_conf,

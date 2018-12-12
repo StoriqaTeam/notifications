@@ -11,10 +11,8 @@ use models::emarsys::AddToContactListRequest;
 use models::emarsys::CreateContactResponse;
 use serde_json::Value as JsonValue;
 use models::emarsys::CreateContactResponseData;
-use futures::Future;
 use serde_json::Map;
 use std::sync::Mutex;
-use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -236,7 +234,7 @@ impl EmarsysClient for EmarsysClientMock {
 
                 let new_field_key_option = keys.iter().find(|&x| {
                     let key = x.clone();
-                    key != request.clone().key_id && key != "source_id".to_string()
+                    key != request.clone().key_id && key != "source_id".to_owned()
                 });
 
                 let source_id_option = v.get("source_id");
@@ -268,7 +266,7 @@ impl EmarsysClient for EmarsysClientMock {
         Box::new(
             futures::future::ok(CreateContactResponse {
                 reply_code: Some(0),
-                reply_text: Some("OK".to_string()),
+                reply_text: Some("OK".to_owned()),
                 data: Some(CreateContactResponseData {
                     ids: Some(ids),
                     errors: None,
@@ -281,12 +279,12 @@ impl EmarsysClient for EmarsysClientMock {
         let ids = self.delete_contacts(email);
 
         let mut data_map = Map::new();
-        data_map.insert("deleted_contacts".to_string(), JsonValue::Number(ids.len().into()));
+        data_map.insert("deleted_contacts".to_owned(), JsonValue::Number(ids.len().into()));
 
         Box::new(
             futures::future::ok(DeleteContactResponse {
                 reply_code: Some(0),
-                reply_text: Some("OK".to_string()),
+                reply_text: Some("OK".to_owned()),
                 data: Some(JsonValue::Object(data_map))
             })
         )
@@ -295,6 +293,8 @@ impl EmarsysClient for EmarsysClientMock {
 
 #[cfg(test)]
 mod tests {
+    use futures::Future;
+    
     use super::*;
     use models::emarsys::*;
 
@@ -345,7 +345,7 @@ mod tests {
             SOURCE_ID_1
         );
         let request = CreateContactRequest {
-            key_id: EMAIL_FIELD.to_string(),
+            key_id: EMAIL_FIELD.to_owned(),
             contacts: vec![
                 user_data
             ],

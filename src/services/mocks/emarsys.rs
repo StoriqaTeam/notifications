@@ -190,6 +190,7 @@ impl EmarsysClientMock {
     }
 }
 
+// TODO: Handle invalid input.
 impl EmarsysClient for EmarsysClientMock {
     fn add_to_contact_list(
         &self,
@@ -207,7 +208,7 @@ impl EmarsysClient for EmarsysClientMock {
             Box::new(futures::future::ok(
                 AddToContactListResponse {
                     reply_code: Some(0),
-                    reply_text: None,       // TODO: return something?
+                    reply_text: Some("OK".to_owned()),
                     data: Some(AddToContactListResponseData {
                         inserted_contacts: Some(contact_list.contacts.len() as i32),
                         errors: None,
@@ -241,7 +242,7 @@ impl EmarsysClient for EmarsysClientMock {
                 let source_id_option = v.get("source_id");
                 let key_field_option = v.get(request.clone().key_id);
 
-                // TODO: PLEASE REWRITE ME!!!
+                // TODO: Get rid of `unimplemented!()` and nesting.
                 if let Some(new_field_key) = new_field_key_option {
                     if let Some(JsonValue::String(new_field)) = v.get(new_field_key.clone()) {
                         if let Some(JsonValue::Number(source_id)) = source_id_option {
@@ -250,7 +251,7 @@ impl EmarsysClient for EmarsysClientMock {
                                     Field::new(request.clone().key_id, key_field.clone()),
                                     Field::new(new_field_key.clone(), new_field.clone()),
 
-                                    // TODO: rewrite without `.unwrap()`.
+                                    // TODO: Rewrite without `.unwrap()`.
                                     source_id.as_i64().unwrap(),
                                 )
                             } else { unimplemented!() }
@@ -267,7 +268,7 @@ impl EmarsysClient for EmarsysClientMock {
         Box::new(
             futures::future::ok(CreateContactResponse {
                 reply_code: Some(0),
-                reply_text: None,   // TODO?
+                reply_text: Some("OK".to_string()),
                 data: Some(CreateContactResponseData {
                     ids: Some(ids),
                     errors: None,
@@ -285,7 +286,7 @@ impl EmarsysClient for EmarsysClientMock {
         Box::new(
             futures::future::ok(DeleteContactResponse {
                 reply_code: Some(0),
-                reply_text: Some("OK".to_string()),   // TODO?
+                reply_text: Some("OK".to_string()),
                 data: Some(JsonValue::Object(data_map))
             })
         )

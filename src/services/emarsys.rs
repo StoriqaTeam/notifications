@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use diesel::connection::AnsiTransactionManager;
 use diesel::pg::Pg;
 use diesel::Connection;
@@ -35,42 +37,30 @@ where
         info!("deleting user {} from emarsys", payload.user_id);
         let http_clone = self.static_context.client_handle.clone();
         let user_email = payload.email;
-        let res = self
-            .static_context
-            .config
-            .emarsys
-            .clone()
-            .ok_or(format_err!("Emarsys config not found"))
-            .into_future()
-            .map(move |emarsys_conf| EmarsysClientImpl {
-                config: emarsys_conf,
-                client_handle: http_clone,
-            }).and_then(move |emarsys_client| emarsys_client.delete_contact(user_email))
-            .and_then(|response| response.into_result());
-
-        Box::new(res)
+        Box::new(
+            self
+                .static_context
+                .emarsys_client
+                .delete_contact(user_email)
+                .and_then(|response| response.into_result())
+        )
     }
 
     fn emarsys_create_contact(&self, payload: CreateContactPayload) -> ServiceFuture<CreatedContact> {
         let user_id = payload.user_id;
         info!("sending user {}, email: {} to emarsys", user_id, payload.email);
-        let http_clone = self.static_context.client_handle.clone();
         let user_id = payload.user_id;
         let user_email = payload.email.clone();
-        let res = self
-            .static_context
-            .config
-            .emarsys
-            .clone()
+        let context = self.static_context.clone();
+        let emarsys_client = context.emarsys_client.clone();
+        let emarsys_config = context.config.emarsys.clone()
             .ok_or(format_err!("Emarsys config not found for user {}", user_id))
-            .into_future()
-            .map(move |emarsys_conf| EmarsysClientImpl {
-                config: emarsys_conf,
-                client_handle: http_clone,
-            }).and_then(|emarsys_client| {
+            .into_future();
+        let res = emarsys_config
+            .and_then(move |emarsys_config| {
                 let request = CreateContactRequest::from(payload);
-                emarsys_client.clone().create_contact(request).map(|r| (emarsys_client, r))
-            }).and_then(move |(emarsys_client, response)| {
+                emarsys_client.clone().create_contact(request).map(|r| (emarsys_client, emarsys_config, r))
+            }).and_then(move |(emarsys_client, emarsys_config, response)| {
                 response
                     .extract_cteated_id()
                     .map_err(|e| {
@@ -79,11 +69,11 @@ where
                             user_id,
                             response
                         )).into()
-                    }).map(|id| (emarsys_client, id))
-            }).and_then(move |(emarsys_client, emarsys_id)| {
+                    }).map(|id| (emarsys_client, emarsys_config, id))
+            }).and_then(move |(emarsys_client, emarsys_config, emarsys_id)| {
                 info!("Emarsys create contact for {}, trying to add it to contact list", user_id);
                 let request = AddToContactListRequest::from_email(user_email);
-                let contact_list_id = emarsys_client.config.registration_contact_list_id;
+                let contact_list_id = emarsys_config.registration_contact_list_id;
                 emarsys_client
                     .add_to_contact_list(contact_list_id, request)
                     .map(|response| {
@@ -120,7 +110,7 @@ where
     }
 }
 
-pub trait EmarsysClient {
+pub trait EmarsysClient: Sync + Send {
     fn add_to_contact_list(
         &self,
         contact_list_id: i64,
@@ -139,9 +129,9 @@ pub trait EmarsysClient {
 }
 
 #[derive(Clone)]
-struct EmarsysClientImpl {
-    config: EmarsysConf,
-    client_handle: ClientHandle,
+pub struct EmarsysClientImpl {
+    pub config: EmarsysConf,
+    pub client_handle: ClientHandle,
 }
 
 impl EmarsysClient for EmarsysClientImpl {

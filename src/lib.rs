@@ -60,6 +60,7 @@ use stq_http::controller::Application;
 use controller::context::StaticContext;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
+use services::emarsys::{EmarsysClient, EmarsysClientImpl};
 
 /// Starts new web service from provided `Config`
 pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option<i32>, callback: F) {
@@ -86,12 +87,21 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     // Repo factory
     let repo_factory = ReposFactoryImpl::new(roles_cache.clone());
 
+    // TODO.
+
     let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
     let client_handle = client.handle();
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
-    let context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), repo_factory);
+    let emarsys_client = config.emarsys.clone()
+        .map(|emarsys_conf| EmarsysClientImpl {
+            config: emarsys_conf,
+            client_handle: client_handle.clone()
+        })
+        .expect("Failed to create emarsys client");
+
+    let context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), repo_factory, Arc::new(emarsys_client));
 
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, move || {

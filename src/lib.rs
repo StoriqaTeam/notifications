@@ -98,7 +98,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
         emarsys_client
     } else {
         let emarsys_client_mock: Arc<EmarsysClient> = Arc::new(EmarsysClientImpl {
-            config: config.emarsys.clone().expect("Failed to load emarsys config"),
+            config: config.emarsys.clone().expect("Emarsys config not found"),
             client_handle: client_handle.clone(),
         });
         emarsys_client_mock

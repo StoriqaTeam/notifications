@@ -379,6 +379,7 @@ mod tests {
         };
         let response = emarsys.create_contact(request).wait().expect("API request failed");
         assert_eq!(response.reply_code, Some(0));
+
         let data = response.data.clone().expect("Response `data` field is missing");
         assert_eq!(data.ids.map(|x| x.len()).unwrap_or(0), 1);
         assert_eq!(data.errors, None);
@@ -394,6 +395,7 @@ mod tests {
         emarsys.create_multiple_contacts(contacts);
 
         let response = emarsys.delete_contact(EMAIL_1.into()).wait().expect("API request failed");
+        assert_eq!(response.reply_code, Some(0));
 
         let data = response.data.clone().expect("Response `data` field is missing");
         if let JsonValue::Object(map) = data {
@@ -425,6 +427,7 @@ mod tests {
             .add_to_contact_list(contact_list_id, request)
             .wait()
             .expect("API request failed");
+        assert_eq!(response.reply_code, Some(0));
 
         let data = response.data.clone().expect("Response `data` field is missing");
 

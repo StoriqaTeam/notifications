@@ -177,7 +177,6 @@ impl EmarsysClientMock {
     }
 }
 
-// TODO: Handle invalid input.
 impl EmarsysClient for EmarsysClientMock {
     fn add_to_contact_list(&self, contact_list_id: i64, request: AddToContactListRequest) -> ServiceFuture<AddToContactListResponse> {
         let contacts = self.find_contacts(request.key_id, request.external_ids);
@@ -197,62 +196,111 @@ impl EmarsysClient for EmarsysClientMock {
                 }),
             }))
         } else {
-            // TODO.
-
-            unimplemented!()
+            Box::new(futures::future::ok(AddToContactListResponse {
+                reply_code: Some(1008),
+                reply_text: Some("Contact list does not exist".to_owned()),
+                data: None,
+            }))
         }
     }
 
     fn create_contact(&self, request: CreateContactRequest) -> ServiceFuture<CreateContactResponse> {
-        let contacts = self.create_multiple_contacts(
-            request
-                .contacts
-                .iter()
-                .map(|v| {
-                    if let JsonValue::Object(m) = v {
-                        let mut keys: Vec<String> = vec![];
+        let mut contacts_data = vec![];
 
-                        for key in m.keys() {
-                            keys.push(key.clone());
-                        }
+        for v in request.contacts.clone() {
+            let m = v.as_object();
+            if m.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(10001), // TODO: Find proper error code.
+                    reply_text: Some("Contact data should be an object".to_owned()),
+                    data: None,
+                }));
+            }
+            let m = m.unwrap();
 
-                        let new_field_key_option = keys.iter().find(|&x| {
-                            let key = x.clone();
-                            key != request.clone().key_id && key != "source_id".to_owned()
-                        });
+            let mut keys = vec![];
 
-                        let source_id_option = v.get("source_id");
-                        let key_field_option = v.get(request.clone().key_id);
+            for key in m.keys() {
+                keys.push(key.clone())
+            }
 
-                        // TODO: Get rid of `unimplemented!()` and nesting.
-                        if let Some(new_field_key) = new_field_key_option {
-                            if let Some(JsonValue::String(new_field)) = v.get(new_field_key.clone()) {
-                                if let Some(JsonValue::Number(source_id)) = source_id_option {
-                                    if let Some(JsonValue::String(key_field)) = key_field_option {
-                                        ContactMockData::new(
-                                            Field::new(request.clone().key_id, key_field.clone()),
-                                            Field::new(new_field_key.clone(), new_field.clone()),
-                                            // TODO: Rewrite without `.unwrap()`.
-                                            source_id.as_i64().unwrap(),
-                                        )
-                                    } else {
-                                        unimplemented!()
-                                    }
-                                } else {
-                                    unimplemented!()
-                                }
-                            } else {
-                                unimplemented!()
-                            }
-                        } else {
-                            unimplemented!()
-                        }
-                    } else {
-                        unimplemented!()
-                    }
-                })
-                .collect(),
-        );
+            let key_id = request.clone().key_id;
+
+            let new_field_key = keys.iter().find(|&x| {
+                let key = x.clone();
+                key != key_id.clone() && key != "source_id".to_owned()
+            });
+            if new_field_key.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(2005),
+                    reply_text: Some("No data provided for key field".to_owned()),
+                    data: None,
+                }));
+            }
+            let new_field_key = new_field_key.unwrap();
+
+            let new_field_value = v.get(new_field_key);
+            if new_field_value.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(2005),
+                    reply_text: Some("No data provided for key field".to_owned()),
+                    data: None,
+                }));
+            }
+            let new_field_value = new_field_value.unwrap().as_str();
+            if new_field_value.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(10001),
+                    reply_text: Some("Key field value should be a string".to_owned()),
+                    data: None,
+                }));
+            }
+            let new_field_value = new_field_value.unwrap().to_owned();
+
+            let source_id = v.get("source_id");
+            if source_id.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(2013),
+                    reply_text: Some("No source ID provided".to_owned()),
+                    data: None,
+                }));
+            }
+            let source_id = source_id.unwrap().as_i64();
+            if source_id.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(10001),
+                    reply_text: Some("Source ID value should be a string".to_owned()),
+                    data: None,
+                }));
+            }
+            let source_id = source_id.unwrap();
+
+            let key_field_value = v.get(key_id.clone());
+            if key_field_value.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(2005),
+                    reply_text: Some(format!("No value provided for key field: {}", key_id.clone())),
+                    data: None,
+                }));
+            }
+            let key_field_value = key_field_value.unwrap().as_str();
+            if key_field_value.is_none() {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(10001),
+                    reply_text: Some("Key field value should be a string".to_owned()),
+                    data: None,
+                }));
+            }
+            let key_field_value = key_field_value.unwrap().to_owned();
+
+            contacts_data.push(ContactMockData::new(
+                Field::new(key_id, key_field_value.clone()),
+                Field::new(new_field_key.clone(), new_field_value.clone()),
+                source_id,
+            ));
+        }
+
+        let contacts = self.create_multiple_contacts(contacts_data);
 
         let ids = contacts.iter().map(|c| c.id as i32).collect();
 

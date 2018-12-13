@@ -93,7 +93,6 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
-    // TODO: Replace with mock implementation if needed.
     let emarsys_client: Arc<EmarsysClient> = if config.clone().testmode.map(|t| t.emarsys).unwrap_or(false) {
         let emarsys_client: Arc<EmarsysClient> = Arc::new(EmarsysClientMock::new());
         emarsys_client
@@ -105,14 +104,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
         emarsys_client_mock
     };
 
-    let context = StaticContext::new(
-        db_pool,
-        cpu_pool,
-        client_handle,
-        Arc::new(config),
-        repo_factory,
-        emarsys_client,
-    );
+    let context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), repo_factory, emarsys_client);
 
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, move || {

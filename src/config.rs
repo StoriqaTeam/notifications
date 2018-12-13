@@ -17,7 +17,7 @@ pub struct Config {
     pub graylog: Option<GrayLogConfig>,
     pub sentry: Option<SentryConfig>,
     pub emarsys: Option<EmarsysConf>,
-    pub testmode: Option<TestmodeConf>
+    pub testmode: Option<TestmodeConf>,
 }
 
 /// Common server settings
@@ -59,7 +59,7 @@ pub struct EmarsysConf {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct TestmodeConf {
-    pub emarsys: bool
+    pub emarsys: bool,
 }
 
 /// Creates new app config struct

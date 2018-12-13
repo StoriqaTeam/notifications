@@ -60,7 +60,8 @@ use stq_http::controller::Application;
 use controller::context::StaticContext;
 use repos::acl::RolesCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
-use services::emarsys::EmarsysClientImpl;
+use services::emarsys::{EmarsysClient, EmarsysClientImpl};
+use services::mocks::emarsys::EmarsysClientMock;
 
 /// Starts new web service from provided `Config`
 pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option<i32>, callback: F) {
@@ -93,14 +94,16 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
     // TODO: Replace with mock implementation if needed.
-    let emarsys_client = config
-        .emarsys
-        .clone()
-        .map(|emarsys_conf| EmarsysClientImpl {
-            config: emarsys_conf,
+    let emarsys_client: Arc<EmarsysClient> = if config.clone().testmode.map(|t| t.emarsys).unwrap_or(false) {
+        let emarsys_client: Arc<EmarsysClient> = Arc::new(EmarsysClientMock::new());
+        emarsys_client
+    } else {
+        let emarsys_client_mock: Arc<EmarsysClient> = Arc::new(EmarsysClientImpl {
+            config: config.emarsys.clone().expect("Failed to load emarsys config"),
             client_handle: client_handle.clone(),
-        })
-        .expect("Failed to create emarsys client");
+        });
+        emarsys_client_mock
+    };
 
     let context = StaticContext::new(
         db_pool,
@@ -108,7 +111,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
         client_handle,
         Arc::new(config),
         repo_factory,
-        Arc::new(emarsys_client),
+        emarsys_client,
     );
 
     let serve = Http::new()

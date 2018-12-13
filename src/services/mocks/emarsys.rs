@@ -160,7 +160,11 @@ impl EmarsysClientMock {
     pub fn find_contact_list(&self, contact_list_id: i64) -> Option<Arc<Mutex<ContactListMock>>> {
         let mut contact_lists = self.contact_lists.lock().unwrap();
 
-        contact_lists.value.iter_mut().find(|x| x.lock().unwrap().id == contact_list_id).map(|x| x.clone())
+        contact_lists
+            .value
+            .iter_mut()
+            .find(|x| x.lock().unwrap().id == contact_list_id)
+            .map(|x| x.clone())
     }
 
     pub fn find_contacts(&self, key_id: String, external_ids: Vec<String>) -> Vec<Arc<Mutex<ContactMock>>> {

@@ -29,7 +29,7 @@ where
     pub route_parser: Arc<RouteParser<Route>>,
     pub client_handle: ClientHandle,
     pub repo_factory: F,
-    pub emarsys_client: Arc<EmarsysClient>
+    pub emarsys_client: Arc<EmarsysClient>,
 }
 
 impl<
@@ -39,7 +39,14 @@ impl<
     > StaticContext<T, M, F>
 {
     /// Create a new static context
-    pub fn new(db_pool: Pool<M>, cpu_pool: CpuPool, client_handle: ClientHandle, config: Arc<Config>, repo_factory: F, emarsys_client: Arc<EmarsysClient>) -> Self {
+    pub fn new(
+        db_pool: Pool<M>,
+        cpu_pool: CpuPool,
+        client_handle: ClientHandle,
+        config: Arc<Config>,
+        repo_factory: F,
+        emarsys_client: Arc<EmarsysClient>,
+    ) -> Self {
         let route_parser = Arc::new(create_route_parser());
         Self {
             route_parser,
@@ -48,7 +55,7 @@ impl<
             client_handle,
             config,
             repo_factory,
-            emarsys_client
+            emarsys_client,
         }
     }
 }
@@ -67,7 +74,7 @@ impl<
             client_handle: self.client_handle.clone(),
             config: self.config.clone(),
             repo_factory: self.repo_factory.clone(),
-            emarsys_client: self.emarsys_client.clone()
+            emarsys_client: self.emarsys_client.clone(),
         }
     }
 }

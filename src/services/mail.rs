@@ -70,13 +70,15 @@ where
                                 .render_template(&template.data, &mail)
                                 .map_err(move |e| e.context(format!("Couldn't render template {:?}", template.name)).into())
                         }
-                    }).and_then(move |text| {
+                    })
+                    .and_then(move |text| {
                         let mut send_mail = mail.into_send_mail();
                         send_mail.text = text;
                         let payload = SendGridPayload::from_send_mail(send_mail, from_email.clone(), from_name.clone(), TEXT_HTML);
                         serde_json::to_string(&payload).map_err(|e| e.context("Couldn't parse payload").into())
                     })
-            }).map_err(|e: FailureError| e.context("Mail service, send_email_with_template endpoint error occured.").into())
+            })
+            .map_err(|e: FailureError| e.context("Mail service, send_email_with_template endpoint error occured.").into())
             .and_then(move |body| {
                 debug!("Sending payload: {}", &body);
                 info!("prepare for sending email from template {:?}", template_name);
@@ -127,7 +129,8 @@ where
                     http_clone
                         .request::<()>(Method::Post, url, Some(body), Some(headers))
                         .map_err(|e| e.context(Error::HttpClient).into())
-                }).map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
+                })
+                .map_err(|e: FailureError| e.context("Mail service, send_mail endpoint error occured.").into()),
         )
     }
 }

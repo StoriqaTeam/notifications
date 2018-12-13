@@ -34,11 +34,10 @@ where
         info!("deleting user {} from emarsys", payload.user_id);
         let user_email = payload.email;
         Box::new(
-            self
-                .static_context
+            self.static_context
                 .emarsys_client
                 .delete_contact(user_email)
-                .and_then(|response| response.into_result())
+                .and_then(|response| response.into_result()),
         )
     }
 
@@ -49,14 +48,21 @@ where
         let user_email = payload.email.clone();
         let context = self.static_context.clone();
         let emarsys_client = context.emarsys_client.clone();
-        let emarsys_config = context.config.emarsys.clone()
+        let emarsys_config = context
+            .config
+            .emarsys
+            .clone()
             .ok_or(format_err!("Emarsys config not found for user {}", user_id))
             .into_future();
         let res = emarsys_config
             .and_then(move |emarsys_config| {
                 let request = CreateContactRequest::from(payload);
-                emarsys_client.clone().create_contact(request).map(|r| (emarsys_client, emarsys_config, r))
-            }).and_then(move |(emarsys_client, emarsys_config, response)| {
+                emarsys_client
+                    .clone()
+                    .create_contact(request)
+                    .map(|r| (emarsys_client, emarsys_config, r))
+            })
+            .and_then(move |(emarsys_client, emarsys_config, response)| {
                 response
                     .extract_cteated_id()
                     .map_err(|e| {
@@ -64,9 +70,12 @@ where
                             "Emarsys for user {} error in response. Response: {:?}",
                             user_id,
                             response
-                        )).into()
-                    }).map(|id| (emarsys_client, emarsys_config, id))
-            }).and_then(move |(emarsys_client, emarsys_config, emarsys_id)| {
+                        ))
+                        .into()
+                    })
+                    .map(|id| (emarsys_client, emarsys_config, id))
+            })
+            .and_then(move |(emarsys_client, emarsys_config, emarsys_id)| {
                 info!("Emarsys create contact for {}, trying to add it to contact list", user_id);
                 let request = AddToContactListRequest::from_email(user_email);
                 let contact_list_id = emarsys_config.registration_contact_list_id;
@@ -75,7 +84,8 @@ where
                     .map(|response| {
                         let inserted_contacts = response.extract_inserted_contacts();
                         (response, inserted_contacts)
-                    }).then(move |res| {
+                    })
+                    .then(move |res| {
                         match res {
                             Ok((_response, Ok(inserted_contacts))) => {
                                 info!(
@@ -95,33 +105,25 @@ where
                         }
                         Ok(emarsys_id)
                     })
-            }).then(|res| match res {
+            })
+            .then(|res| match res {
                 Ok(id) => Ok(id),
                 Err(err) => {
                     error!("{}", err);
                     Err(err)
                 }
-            }).map(move |emarsys_id| CreatedContact { emarsys_id, user_id });
+            })
+            .map(move |emarsys_id| CreatedContact { emarsys_id, user_id });
         Box::new(res)
     }
 }
 
 pub trait EmarsysClient: Sync + Send {
-    fn add_to_contact_list(
-        &self,
-        contact_list_id: i64,
-        request: AddToContactListRequest
-    ) -> ServiceFuture<AddToContactListResponse>;
+    fn add_to_contact_list(&self, contact_list_id: i64, request: AddToContactListRequest) -> ServiceFuture<AddToContactListResponse>;
 
-    fn create_contact(
-        &self,
-        request: CreateContactRequest
-    ) -> ServiceFuture<CreateContactResponse>;
+    fn create_contact(&self, request: CreateContactRequest) -> ServiceFuture<CreateContactResponse>;
 
-    fn delete_contact(
-        &self,
-        email: String
-    ) -> ServiceFuture<DeleteContactResponse>;
+    fn delete_contact(&self, email: String) -> ServiceFuture<DeleteContactResponse>;
 }
 
 #[derive(Clone)]
@@ -131,11 +133,7 @@ pub struct EmarsysClientImpl {
 }
 
 impl EmarsysClient for EmarsysClientImpl {
-    fn add_to_contact_list(
-        &self,
-        contact_list_id: i64,
-        request: AddToContactListRequest
-    ) -> ServiceFuture<AddToContactListResponse> {
+    fn add_to_contact_list(&self, contact_list_id: i64, request: AddToContactListRequest) -> ServiceFuture<AddToContactListResponse> {
         let config = self.config.clone();
         let signature = Signature::new(config.username_token, config.api_secret_key);
         let url = format!("{}/contactlist/{}/add", self.config.api_addr, contact_list_id);
@@ -151,14 +149,16 @@ impl EmarsysClient for EmarsysClientImpl {
         headers.set(xwsse);
 
         let client_handle = self.client_handle.clone();
-        Box::new(serde_json::to_string(&request)
-            .into_future()
-            .map_err(|e| e.context("Couldn't serialize payload").into())
-            .and_then(move |request_body| {
-                client_handle
-                    .request::<AddToContactListResponse>(Method::Post, url, Some(request_body), Some(headers))
-                    .map_err(|e| e.context(Error::HttpClient).into())
-            }))
+        Box::new(
+            serde_json::to_string(&request)
+                .into_future()
+                .map_err(|e| e.context("Couldn't serialize payload").into())
+                .and_then(move |request_body| {
+                    client_handle
+                        .request::<AddToContactListResponse>(Method::Post, url, Some(request_body), Some(headers))
+                        .map_err(|e| e.context(Error::HttpClient).into())
+                }),
+        )
     }
 
     fn create_contact(&self, request: CreateContactRequest) -> ServiceFuture<CreateContactResponse> {
@@ -177,14 +177,16 @@ impl EmarsysClient for EmarsysClientImpl {
         headers.set(xwsse);
 
         let client_handle = self.client_handle.clone();
-        Box::new(serde_json::to_string(&request)
-            .into_future()
-            .map_err(|e| e.context("Couldn't serialize payload").into())
-            .and_then(move |request_body| {
-                client_handle
-                    .request::<CreateContactResponse>(Method::Post, url, Some(request_body), Some(headers))
-                    .map_err(|e| e.context(Error::HttpClient).into())
-            }))
+        Box::new(
+            serde_json::to_string(&request)
+                .into_future()
+                .map_err(|e| e.context("Couldn't serialize payload").into())
+                .and_then(move |request_body| {
+                    client_handle
+                        .request::<CreateContactResponse>(Method::Post, url, Some(request_body), Some(headers))
+                        .map_err(|e| e.context(Error::HttpClient).into())
+                }),
+        )
     }
 
     fn delete_contact(&self, email: String) -> ServiceFuture<DeleteContactResponse> {
@@ -205,13 +207,15 @@ impl EmarsysClient for EmarsysClientImpl {
         headers.set(xwsse);
 
         let client_handle = self.client_handle.clone();
-        Box::new(serde_json::to_string(&request)
-            .into_future()
-            .map_err(|e| e.context("Couldn't serialize payload").into())
-            .and_then(move |request_body| {
-                client_handle
-                    .request::<DeleteContactResponse>(Method::Post, url, Some(request_body), Some(headers))
-                    .map_err(|e| e.context(Error::HttpClient).into())
-            }))
+        Box::new(
+            serde_json::to_string(&request)
+                .into_future()
+                .map_err(|e| e.context("Couldn't serialize payload").into())
+                .and_then(move |request_body| {
+                    client_handle
+                        .request::<DeleteContactResponse>(Method::Post, url, Some(request_body), Some(headers))
+                        .map_err(|e| e.context(Error::HttpClient).into())
+                }),
+        )
     }
 }

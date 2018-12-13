@@ -93,14 +93,23 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
     // TODO: Replace with mock implementation if needed.
-    let emarsys_client = config.emarsys.clone()
+    let emarsys_client = config
+        .emarsys
+        .clone()
         .map(|emarsys_conf| EmarsysClientImpl {
             config: emarsys_conf,
-            client_handle: client_handle.clone()
+            client_handle: client_handle.clone(),
         })
         .expect("Failed to create emarsys client");
 
-    let context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), repo_factory, Arc::new(emarsys_client));
+    let context = StaticContext::new(
+        db_pool,
+        cpu_pool,
+        client_handle,
+        Arc::new(config),
+        repo_factory,
+        Arc::new(emarsys_client),
+    );
 
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, move || {
@@ -109,7 +118,8 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
             let app = Application::<errors::Error>::new(controller);
 
             Ok(app)
-        }).unwrap_or_else(|reason| {
+        })
+        .unwrap_or_else(|reason| {
             eprintln!("Http Server Initialization Error: {}", reason);
             process::exit(1);
         });
@@ -122,7 +132,8 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
                     handle.spawn(conn.map(|_| ()).map_err(|why| eprintln!("Server Error: {:?}", why)));
                     Ok(())
                 }
-            }).map_err(|_| ()),
+            })
+            .map_err(|_| ()),
     );
 
     info!("Listening on http://{}, threads: {}", address, thread_count);
@@ -134,5 +145,6 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     core.run(tokio_signal::ctrl_c().flatten_stream().take(1u64).for_each(|()| {
         info!("Ctrl+C received. Exit");
         Ok(())
-    })).unwrap();
+    }))
+    .unwrap();
 }

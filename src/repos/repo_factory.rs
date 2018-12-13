@@ -105,8 +105,8 @@ pub mod tests {
     use controller::context::{DynamicContext, StaticContext};
     use models::*;
     use repos::*;
-    use services::*;
     use services::mocks::emarsys::EmarsysClientMock;
+    use services::*;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
     pub static MOCK_USER_ID: UserId = UserId(1);
@@ -123,7 +123,14 @@ pub mod tests {
         let config = Config::new().unwrap();
         let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
         let client_handle = client.handle();
-        let static_context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), MOCK_REPO_FACTORY, Arc::new(emarsys_client_mock));
+        let static_context = StaticContext::new(
+            db_pool,
+            cpu_pool,
+            client_handle,
+            Arc::new(config),
+            MOCK_REPO_FACTORY,
+            Arc::new(emarsys_client_mock),
+        );
         let dynamic_context = DynamicContext::new(user_id, String::default());
 
         Service::new(static_context, dynamic_context)

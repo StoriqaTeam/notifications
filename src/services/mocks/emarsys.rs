@@ -221,10 +221,10 @@ impl EmarsysClient for EmarsysClientMock {
                 keys.push(key.clone())
             }
 
-            let key_id = request.clone().key_id;
+            let key_id = request.key_id.clone();
 
-            let new_field_key = keys.iter().find(|&x| {
-                let key = x.clone();
+            let new_field_key = keys.iter().find(|&key| {
+                let key = key.clone();
                 key != key_id.clone() && key != "source_id".to_string()
             });
             if new_field_key.is_none() {

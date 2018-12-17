@@ -12,9 +12,9 @@ use serde_json::Map;
 use serde_json::Value as JsonValue;
 use services::emarsys::EmarsysClient;
 use services::types::ServiceFuture;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct ContactMockData {
@@ -25,11 +25,7 @@ pub struct ContactMockData {
 
 impl ContactMockData {
     pub fn new(key_id: String, fields: HashMap<String, String>, source_id: i64) -> ContactMockData {
-        ContactMockData {
-            key_id,
-            fields,
-            source_id,
-        }
+        ContactMockData { key_id, fields, source_id }
     }
 }
 
@@ -100,23 +96,21 @@ impl<T: Clone> Counter<T> {
 #[derive(Clone)]
 pub struct EmarsysClientMockState {
     pub contacts: Counter<ContactMock>,
-    pub contact_lists: Counter<ContactListMock>
+    pub contact_lists: Counter<ContactListMock>,
 }
 
 #[derive(Clone)]
 pub struct EmarsysClientMock {
-    pub state: Arc<Mutex<EmarsysClientMockState>>
+    pub state: Arc<Mutex<EmarsysClientMockState>>,
 }
 
 impl EmarsysClientMock {
     pub fn new() -> EmarsysClientMock {
         EmarsysClientMock {
-            state: Arc::new(Mutex::new(
-                EmarsysClientMockState {
-                    contacts: Counter::new(),
-                    contact_lists: Counter::new()
-                }
-            ))
+            state: Arc::new(Mutex::new(EmarsysClientMockState {
+                contacts: Counter::new(),
+                contact_lists: Counter::new(),
+            })),
         }
     }
 
@@ -142,7 +136,7 @@ impl EmarsysClientMock {
         let ref mut contacts = state.contacts;
 
         contacts.value.retain(|contact| {
-//            let delete = contact.data.key_field.key == EMAIL_FIELD && contact.data.key_field.value == email;
+            //            let delete = contact.data.key_field.key == EMAIL_FIELD && contact.data.key_field.value == email;
             let delete = contact.data.key_id == EMAIL_FIELD && contact.data.fields.get(EMAIL_FIELD.into()) == Some(&email);
             if delete {
                 deleted_ids.push(contact.id)
@@ -167,9 +161,7 @@ impl EmarsysClientMock {
         contacts
             .value
             .iter()
-            .filter(|&contact| {
-                contact.data.key_id == key_id && external_ids.contains(&contact.data.fields[&key_id])
-            })
+            .filter(|&contact| contact.data.key_id == key_id && external_ids.contains(&contact.data.fields[&key_id]))
             .map(|x| x.clone())
             .collect()
     }
@@ -298,21 +290,17 @@ impl EmarsysClient for EmarsysClientMock {
             }
             let key_field_value = key_field_value.unwrap().to_owned();
 
-//            contacts_data.push(ContactMockData::new(
-//                Field::new(key_id, key_field_value.clone()),
-//                Field::new(new_field_key.clone(), new_field_value.clone()),
-//                source_id,
-//            ));
+            //            contacts_data.push(ContactMockData::new(
+            //                Field::new(key_id, key_field_value.clone()),
+            //                Field::new(new_field_key.clone(), new_field_value.clone()),
+            //                source_id,
+            //            ));
 
             let mut fields = HashMap::new();
             fields.insert(key_id.clone(), key_field_value.clone());
             fields.insert(new_field_key.clone(), new_field_value.clone());
 
-            contacts_data.push(ContactMockData::new(
-                key_id,
-                fields,
-                source_id
-            ));
+            contacts_data.push(ContactMockData::new(key_id, fields, source_id));
         }
 
         let contacts = self.create_multiple_contacts(contacts_data);
@@ -380,11 +368,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert(EMAIL_FIELD.into(), email.into());
         fields.insert(FIRST_NAME_FIELD.into(), first_name.into());
-        ContactMockData::new(
-            EMAIL_FIELD.into(),
-            fields,
-            source_id.into(),
-        )
+        ContactMockData::new(EMAIL_FIELD.into(), fields, source_id.into())
     }
 
     #[test]

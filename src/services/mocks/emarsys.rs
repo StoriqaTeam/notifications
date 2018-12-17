@@ -160,20 +160,8 @@ impl EmarsysClientMock {
         contact_lists.push_with_id(|id| ContactListMock::new(id))
     }
 
-//    pub fn find_contact_list(&self, contact_list_id: i64) -> Option<ContactListMock> {
-//        let mut state = self.state.lock().unwrap();
-//
-//        let ref mut contact_lists = state.contact_lists;
-//
-//        contact_lists
-//            .value
-//            .iter_mut()
-//            .find(|contact_list| contact_list.id == contact_list_id)
-//            .map(|x| x.clone())
-//    }
-
     pub fn find_contacts(&self, key_id: String, external_ids: Vec<String>) -> Vec<ContactMock> {
-        let mut state = self.state.lock().unwrap();
+        let state = self.state.lock().unwrap();
         let ref contacts = state.contacts;
 
         contacts

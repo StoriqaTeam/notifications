@@ -61,11 +61,13 @@ impl<'a, T: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager
                 let filter = templates.filter(name.eq(template_name.clone()));
                 let query = diesel::update(filter).set(data.eq(&payload));
                 query.get_result(self.db_conn).map_err(From::from)
-            }).map_err(|e: FailureError| {
+            })
+            .map_err(|e: FailureError| {
                 e.context(format!(
                     "Updating template with name {:?} and payload {} failed.",
                     template_name, payload
-                )).into()
+                ))
+                .into()
             })
     }
 }

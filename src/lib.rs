@@ -100,7 +100,8 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
             let app = Application::<errors::Error>::new(controller);
 
             Ok(app)
-        }).unwrap_or_else(|reason| {
+        })
+        .unwrap_or_else(|reason| {
             eprintln!("Http Server Initialization Error: {}", reason);
             process::exit(1);
         });
@@ -113,7 +114,8 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
                     handle.spawn(conn.map(|_| ()).map_err(|why| eprintln!("Server Error: {:?}", why)));
                     Ok(())
                 }
-            }).map_err(|_| ()),
+            })
+            .map_err(|_| ()),
     );
 
     info!("Listening on http://{}, threads: {}", address, thread_count);
@@ -125,5 +127,6 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     core.run(tokio_signal::ctrl_c().flatten_stream().take(1u64).for_each(|()| {
         info!("Ctrl+C received. Exit");
         Ok(())
-    })).unwrap();
+    }))
+    .unwrap();
 }

@@ -186,7 +186,7 @@ impl EmarsysClient for EmarsysClientMock {
         if found_contact_list {
             Box::new(futures::future::ok(AddToContactListResponse {
                 reply_code: Some(0),
-                reply_text: Some("OK".to_owned()),
+                reply_text: Some("OK".to_string()),
                 data: Some(AddToContactListResponseData {
                     inserted_contacts: Some(contacts.len() as i32),
                     errors: None,
@@ -195,7 +195,7 @@ impl EmarsysClient for EmarsysClientMock {
         } else {
             Box::new(futures::future::ok(AddToContactListResponse {
                 reply_code: Some(1008),
-                reply_text: Some("Contact list does not exist".to_owned()),
+                reply_text: Some("Contact list does not exist".to_string()),
                 data: None,
             }))
         }
@@ -209,7 +209,7 @@ impl EmarsysClient for EmarsysClientMock {
             if contact_object.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(10001), // TODO: Find proper error code.
-                    reply_text: Some("Contact data should be an object".to_owned()),
+                    reply_text: Some("Contact data should be an object".to_string()),
                     data: None,
                 }));
             }
@@ -225,12 +225,12 @@ impl EmarsysClient for EmarsysClientMock {
 
             let new_field_key = keys.iter().find(|&x| {
                 let key = x.clone();
-                key != key_id.clone() && key != "source_id".to_owned()
+                key != key_id.clone() && key != "source_id".to_string()
             });
             if new_field_key.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(2005),
-                    reply_text: Some("No data provided for key field".to_owned()),
+                    reply_text: Some("No data provided for key field".to_string()),
                     data: None,
                 }));
             }
@@ -240,7 +240,7 @@ impl EmarsysClient for EmarsysClientMock {
             if new_field_value.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(2005),
-                    reply_text: Some("No data provided for key field".to_owned()),
+                    reply_text: Some("No data provided for key field".to_string()),
                     data: None,
                 }));
             }
@@ -248,17 +248,17 @@ impl EmarsysClient for EmarsysClientMock {
             if new_field_value.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(10001),
-                    reply_text: Some("Key field value should be a string".to_owned()),
+                    reply_text: Some("Key field value should be a string".to_string()),
                     data: None,
                 }));
             }
-            let new_field_value = new_field_value.unwrap().to_owned();
+            let new_field_value = new_field_value.unwrap().to_string();
 
             let source_id = contact_value.get("source_id");
             if source_id.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(2013),
-                    reply_text: Some("No source ID provided".to_owned()),
+                    reply_text: Some("No source ID provided".to_string()),
                     data: None,
                 }));
             }
@@ -266,7 +266,7 @@ impl EmarsysClient for EmarsysClientMock {
             if source_id.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(10001),
-                    reply_text: Some("Source ID value should be a string".to_owned()),
+                    reply_text: Some("Source ID value should be a string".to_string()),
                     data: None,
                 }));
             }
@@ -284,11 +284,11 @@ impl EmarsysClient for EmarsysClientMock {
             if key_field_value.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(10001),
-                    reply_text: Some("Key field value should be a string".to_owned()),
+                    reply_text: Some("Key field value should be a string".to_string()),
                     data: None,
                 }));
             }
-            let key_field_value = key_field_value.unwrap().to_owned();
+            let key_field_value = key_field_value.unwrap().to_string();
 
             //            contacts_data.push(ContactMockData::new(
             //                Field::new(key_id, key_field_value.clone()),
@@ -309,7 +309,7 @@ impl EmarsysClient for EmarsysClientMock {
 
         Box::new(futures::future::ok(CreateContactResponse {
             reply_code: Some(0),
-            reply_text: Some("OK".to_owned()),
+            reply_text: Some("OK".to_string()),
             data: Some(CreateContactResponseData {
                 ids: Some(ids),
                 errors: None,
@@ -321,11 +321,11 @@ impl EmarsysClient for EmarsysClientMock {
         let ids = self.delete_contacts(email);
 
         let mut data_map = Map::new();
-        data_map.insert("deleted_contacts".to_owned(), JsonValue::Number(ids.len().into()));
+        data_map.insert("deleted_contacts".to_string(), JsonValue::Number(ids.len().into()));
 
         Box::new(futures::future::ok(DeleteContactResponse {
             reply_code: Some(0),
-            reply_text: Some("OK".to_owned()),
+            reply_text: Some("OK".to_string()),
             data: Some(JsonValue::Object(data_map)),
         }))
     }
@@ -376,7 +376,7 @@ mod tests {
         let emarsys = EmarsysClientMock::new();
         let user_data = create_contact_value(EMAIL_1, FIRST_NAME_1, SOURCE_ID_1);
         let request = CreateContactRequest {
-            key_id: EMAIL_FIELD.to_owned(),
+            key_id: EMAIL_FIELD.to_string(),
             contacts: vec![user_data],
         };
         let response = emarsys.create_contact(request).wait().expect("API request failed");

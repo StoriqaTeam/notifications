@@ -64,7 +64,7 @@ where
             })
             .and_then(move |(emarsys_client, emarsys_config, response)| {
                 response
-                    .extract_cteated_id()
+                    .extract_created_id()
                     .map_err(|e| {
                         e.context(format_err!(
                             "Emarsys for user {} error in response. Response: {:?}",

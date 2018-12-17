@@ -14,31 +14,20 @@ use services::emarsys::EmarsysClient;
 use services::types::ServiceFuture;
 use std::sync::Arc;
 use std::sync::Mutex;
-
-#[derive(Clone)]
-pub struct Field {
-    key: String,
-    value: String,
-}
-
-impl Field {
-    pub fn new(key: String, value: String) -> Field {
-        Field { key, value }
-    }
-}
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct ContactMockData {
-    pub key_field: Field,
-    pub new_field: Field,
+    pub key_id: String,
+    pub fields: HashMap<String, String>,
     pub source_id: i64,
 }
 
 impl ContactMockData {
-    pub fn new(key_field: Field, new_field: Field, source_id: i64) -> ContactMockData {
+    pub fn new(key_id: String, fields: HashMap<String, String>, source_id: i64) -> ContactMockData {
         ContactMockData {
-            key_field,
-            new_field,
+            key_id,
+            fields,
             source_id,
         }
     }
@@ -58,8 +47,8 @@ impl ContactMock {
 
 #[derive(Clone)]
 pub struct ContactListMock {
-    id: i64,
-    contacts: Vec<Arc<ContactMock>>,
+    pub id: i64,
+    pub contacts: Vec<ContactMock>,
 }
 
 impl ContactListMock {
@@ -67,15 +56,15 @@ impl ContactListMock {
         ContactListMock { id, contacts: vec![] }
     }
 
-    pub fn add_contact(&mut self, contact: Arc<ContactMock>) {
+    pub fn add_contact(&mut self, contact: ContactMock) {
         self.contacts.push(contact);
     }
 }
 
 #[derive(Clone)]
-struct Counter<T: Clone> {
-    id: i64,
-    value: Vec<Arc<Mutex<T>>>,
+pub struct Counter<T: Clone> {
+    pub id: i64,
+    pub value: Vec<T>,
 }
 
 impl<T: Clone> Counter<T> {
@@ -89,17 +78,17 @@ impl<T: Clone> Counter<T> {
         cnt
     }
 
-    pub fn push_with_id(&mut self, f: impl FnOnce(i64) -> T) -> Arc<Mutex<T>> {
-        let elem = Arc::new(Mutex::new(f(self.inc())));
+    pub fn push_with_id(&mut self, f: impl FnOnce(i64) -> T) -> T {
+        let elem = f(self.inc());
         self.value.push(elem.clone());
         elem
     }
 
-    pub fn push_multiple_with_ids(&mut self, fs: Vec<impl FnOnce(i64) -> T>) -> Vec<Arc<Mutex<T>>> {
+    pub fn push_multiple_with_ids(&mut self, fs: Vec<impl FnOnce(i64) -> T>) -> Vec<T> {
         let mut result = vec![];
 
         for f in fs {
-            let elem = Arc::new(Mutex::new(f(self.inc())));
+            let elem = f(self.inc());
             self.value.push(elem.clone());
             result.push(elem);
         }
@@ -109,42 +98,54 @@ impl<T: Clone> Counter<T> {
 }
 
 #[derive(Clone)]
+pub struct EmarsysClientMockState {
+    pub contacts: Counter<ContactMock>,
+    pub contact_lists: Counter<ContactListMock>
+}
+
+#[derive(Clone)]
 pub struct EmarsysClientMock {
-    contacts: Arc<Mutex<Counter<ContactMock>>>,
-    contact_lists: Arc<Mutex<Counter<ContactListMock>>>,
+    pub state: Arc<Mutex<EmarsysClientMockState>>
 }
 
 impl EmarsysClientMock {
     pub fn new() -> EmarsysClientMock {
         EmarsysClientMock {
-            contacts: Arc::new(Mutex::new(Counter::new())),
-            contact_lists: Arc::new(Mutex::new(Counter::new())),
+            state: Arc::new(Mutex::new(
+                EmarsysClientMockState {
+                    contacts: Counter::new(),
+                    contact_lists: Counter::new()
+                }
+            ))
         }
     }
 
-    pub fn create_multiple_contacts(&self, new_contacts: Vec<ContactMockData>) -> Vec<Arc<Mutex<ContactMock>>> {
-        let mut contacts = self.contacts.lock().unwrap();
+    pub fn create_multiple_contacts(&self, new_contacts: Vec<ContactMockData>) -> Vec<ContactMock> {
+        let mut state = self.state.lock().unwrap();
+        let ref mut contacts = state.contacts;
 
         contacts.push_multiple_with_ids(
             new_contacts
                 .iter()
                 .map(|data| {
-                    let d = data.clone();
-                    |id| ContactMock::new(id, d)
+                    let data = data.clone();
+                    |id| ContactMock::new(id, data)
                 })
                 .collect(),
         )
     }
 
     pub fn delete_contacts(&self, email: String) -> Vec<i64> {
-        let mut deleted_ids = vec![];
-        let mut contacts = self.contacts.lock().unwrap();
+        let mut state = self.state.lock().unwrap();
 
-        contacts.value.retain(|c| {
-            let c = c.lock().unwrap();
-            let delete = c.data.key_field.key == EMAIL_FIELD && c.data.key_field.value == email;
+        let mut deleted_ids = vec![];
+        let ref mut contacts = state.contacts;
+
+        contacts.value.retain(|contact| {
+//            let delete = contact.data.key_field.key == EMAIL_FIELD && contact.data.key_field.value == email;
+            let delete = contact.data.key_id == EMAIL_FIELD && contact.data.fields.get(EMAIL_FIELD.into()) == Some(&email);
             if delete {
-                deleted_ids.push(c.id)
+                deleted_ids.push(contact.id)
             }
             delete
         });
@@ -152,30 +153,34 @@ impl EmarsysClientMock {
         deleted_ids
     }
 
-    pub fn create_contact_list(&self) -> Arc<Mutex<ContactListMock>> {
-        let mut contact_lists = self.contact_lists.lock().unwrap();
+    pub fn create_contact_list(&self) -> ContactListMock {
+        let mut state = self.state.lock().unwrap();
+
+        let ref mut contact_lists = state.contact_lists;
         contact_lists.push_with_id(|id| ContactListMock::new(id))
     }
 
-    pub fn find_contact_list(&self, contact_list_id: i64) -> Option<Arc<Mutex<ContactListMock>>> {
-        let mut contact_lists = self.contact_lists.lock().unwrap();
+//    pub fn find_contact_list(&self, contact_list_id: i64) -> Option<ContactListMock> {
+//        let mut state = self.state.lock().unwrap();
+//
+//        let ref mut contact_lists = state.contact_lists;
+//
+//        contact_lists
+//            .value
+//            .iter_mut()
+//            .find(|contact_list| contact_list.id == contact_list_id)
+//            .map(|x| x.clone())
+//    }
 
-        contact_lists
-            .value
-            .iter_mut()
-            .find(|x| x.lock().unwrap().id == contact_list_id)
-            .map(|x| x.clone())
-    }
-
-    pub fn find_contacts(&self, key_id: String, external_ids: Vec<String>) -> Vec<Arc<Mutex<ContactMock>>> {
-        let contacts = self.contacts.lock().unwrap();
+    pub fn find_contacts(&self, key_id: String, external_ids: Vec<String>) -> Vec<ContactMock> {
+        let mut state = self.state.lock().unwrap();
+        let ref contacts = state.contacts;
 
         contacts
             .value
             .iter()
-            .filter(|&x| {
-                let contact = x.lock().unwrap();
-                contact.data.key_field.key == key_id && external_ids.contains(&contact.data.key_field.value)
+            .filter(|&contact| {
+                contact.data.key_id == key_id && external_ids.contains(&contact.data.fields[&key_id])
             })
             .map(|x| x.clone())
             .collect()
@@ -185,19 +190,25 @@ impl EmarsysClientMock {
 impl EmarsysClient for EmarsysClientMock {
     fn add_to_contact_list(&self, contact_list_id: i64, request: AddToContactListRequest) -> ServiceFuture<AddToContactListResponse> {
         let contacts = self.find_contacts(request.key_id, request.external_ids);
-        let contact_list = self.find_contact_list(contact_list_id);
+        let ref mut state = self.state.lock().unwrap();
 
-        if let Some(contact_list) = contact_list {
-            let mut contact_list = contact_list.lock().unwrap();
-            for contact in contacts {
-                contact_list.add_contact(Arc::new(contact.lock().unwrap().clone()))
+        let mut found_contact_list = false;
+        for contact_list in &mut state.contact_lists.value {
+            if contact_list.id == contact_list_id {
+                found_contact_list = true;
+                for contact in contacts.clone() {
+                    contact_list.contacts.push(contact);
+                }
+                break;
             }
+        }
 
+        if found_contact_list {
             Box::new(futures::future::ok(AddToContactListResponse {
                 reply_code: Some(0),
                 reply_text: Some("OK".to_owned()),
                 data: Some(AddToContactListResponseData {
-                    inserted_contacts: Some(contact_list.contacts.len() as i32),
+                    inserted_contacts: Some(contacts.len() as i32),
                     errors: None,
                 }),
             }))
@@ -213,20 +224,20 @@ impl EmarsysClient for EmarsysClientMock {
     fn create_contact(&self, request: CreateContactRequest) -> ServiceFuture<CreateContactResponse> {
         let mut contacts_data = vec![];
 
-        for v in request.contacts.clone() {
-            let m = v.as_object();
-            if m.is_none() {
+        for contact_value in request.contacts.clone() {
+            let contact_object = contact_value.as_object();
+            if contact_object.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(10001), // TODO: Find proper error code.
                     reply_text: Some("Contact data should be an object".to_owned()),
                     data: None,
                 }));
             }
-            let m = m.unwrap();
+            let contact_object = contact_object.unwrap();
 
             let mut keys = vec![];
 
-            for key in m.keys() {
+            for key in contact_object.keys() {
                 keys.push(key.clone())
             }
 
@@ -245,7 +256,7 @@ impl EmarsysClient for EmarsysClientMock {
             }
             let new_field_key = new_field_key.unwrap();
 
-            let new_field_value = v.get(new_field_key);
+            let new_field_value = contact_value.get(new_field_key);
             if new_field_value.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(2005),
@@ -263,7 +274,7 @@ impl EmarsysClient for EmarsysClientMock {
             }
             let new_field_value = new_field_value.unwrap().to_owned();
 
-            let source_id = v.get("source_id");
+            let source_id = contact_value.get("source_id");
             if source_id.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(2013),
@@ -281,7 +292,7 @@ impl EmarsysClient for EmarsysClientMock {
             }
             let source_id = source_id.unwrap();
 
-            let key_field_value = v.get(key_id.clone());
+            let key_field_value = contact_value.get(key_id.clone());
             if key_field_value.is_none() {
                 return Box::new(futures::future::ok(CreateContactResponse {
                     reply_code: Some(2005),
@@ -299,16 +310,26 @@ impl EmarsysClient for EmarsysClientMock {
             }
             let key_field_value = key_field_value.unwrap().to_owned();
 
+//            contacts_data.push(ContactMockData::new(
+//                Field::new(key_id, key_field_value.clone()),
+//                Field::new(new_field_key.clone(), new_field_value.clone()),
+//                source_id,
+//            ));
+
+            let mut fields = HashMap::new();
+            fields.insert(key_id.clone(), key_field_value.clone());
+            fields.insert(new_field_key.clone(), new_field_value.clone());
+
             contacts_data.push(ContactMockData::new(
-                Field::new(key_id, key_field_value.clone()),
-                Field::new(new_field_key.clone(), new_field_value.clone()),
-                source_id,
+                key_id,
+                fields,
+                source_id
             ));
         }
 
         let contacts = self.create_multiple_contacts(contacts_data);
 
-        let ids = contacts.iter().map(|c| c.lock().unwrap().id as i32).collect();
+        let ids = contacts.iter().map(|c| c.id as i32).collect();
 
         Box::new(futures::future::ok(CreateContactResponse {
             reply_code: Some(0),
@@ -368,9 +389,12 @@ mod tests {
     }
 
     fn create_contact_data(email: impl Into<String>, first_name: impl Into<String>, source_id: impl Into<i64>) -> ContactMockData {
+        let mut fields = HashMap::new();
+        fields.insert(EMAIL_FIELD.into(), email.into());
+        fields.insert(FIRST_NAME_FIELD.into(), first_name.into());
         ContactMockData::new(
-            Field::new(EMAIL_FIELD.into(), email.into()),
-            Field::new(FIRST_NAME_FIELD.into(), first_name.into()),
+            EMAIL_FIELD.into(),
+            fields,
             source_id.into(),
         )
     }
@@ -424,13 +448,17 @@ mod tests {
         emarsys.create_multiple_contacts(contacts.clone());
 
         let contact_list = emarsys.create_contact_list();
-        let contact_list_id = contact_list.lock().unwrap().id;
+        let contact_list_id = contact_list.id;
 
         let request = AddToContactListRequest {
             key_id: EMAIL_FIELD.into(),
             external_ids: vec![EMAIL_1.into(), EMAIL_2.into()],
         };
         let response = emarsys
+            .add_to_contact_list(contact_list_id, request.clone())
+            .wait()
+            .expect("API request failed");
+        emarsys
             .add_to_contact_list(contact_list_id, request)
             .wait()
             .expect("API request failed");
@@ -440,5 +468,9 @@ mod tests {
 
         let inserted_contacts = data.inserted_contacts.expect("Response `data.deleted_contacts` field is missing");
         assert_eq!(inserted_contacts, contacts.len() as i32);
+
+        let state = emarsys.state.lock().unwrap();
+        let contact_list = state.contact_lists.value.first().unwrap();
+        assert_eq!(contact_list.contacts.len(), 4);
     }
 }

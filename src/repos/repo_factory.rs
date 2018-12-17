@@ -105,6 +105,7 @@ pub mod tests {
     use controller::context::{DynamicContext, StaticContext};
     use models::*;
     use repos::*;
+    use services::mocks::emarsys::EmarsysClientMock;
     use services::*;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
@@ -117,11 +118,19 @@ pub mod tests {
         let manager = MockConnectionManager::default();
         let db_pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool");
         let cpu_pool = CpuPool::new(1);
+        let emarsys_client_mock = EmarsysClientMock::new();
 
         let config = Config::new().unwrap();
         let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
         let client_handle = client.handle();
-        let static_context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), MOCK_REPO_FACTORY);
+        let static_context = StaticContext::new(
+            db_pool,
+            cpu_pool,
+            client_handle,
+            Arc::new(config),
+            MOCK_REPO_FACTORY,
+            Arc::new(emarsys_client_mock),
+        );
         let dynamic_context = DynamicContext::new(user_id, String::default());
 
         Service::new(static_context, dynamic_context)

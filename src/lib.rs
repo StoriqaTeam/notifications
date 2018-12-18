@@ -99,7 +99,6 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
             client_handle: client_handle.clone(),
         });
         emarsys_client_mock
-
     } else {
         let emarsys_client: Arc<EmarsysClient> = Arc::new(EmarsysClientMock::new());
         emarsys_client

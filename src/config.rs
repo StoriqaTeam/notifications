@@ -57,6 +57,7 @@ pub struct EmarsysConf {
     pub registration_contact_list_id: i64,
 }
 
+/// Testmode settings
 #[derive(Debug, Deserialize, Clone)]
 pub struct TestmodeConf {
     pub emarsys: bool,

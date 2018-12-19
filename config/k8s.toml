@@ -13,3 +13,6 @@ from_name = "Storiqa"
 
 [graylog]
 addr = "udplog.stq.cloud:32303"
+
+[testmode]
+emarsys = true

@@ -133,7 +133,7 @@ pub struct PasswordDigest {
 }
 
 impl CreateContactResponse {
-    pub fn extract_cteated_id(&self) -> Result<EmarsysId, FailureError> {
+    pub fn extract_created_id(&self) -> Result<EmarsysId, FailureError> {
         if self.reply_code == Some(0) {
             let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
             if let Some(ref _errors) = data.errors {

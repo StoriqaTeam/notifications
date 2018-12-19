@@ -20,11 +20,11 @@ use std::sync::Mutex;
 pub struct ContactMockData {
     pub key_id: String,
     pub fields: HashMap<String, String>,
-    pub source_id: i64,
+    pub source_id: Option<i64>,
 }
 
 impl ContactMockData {
-    pub fn new(key_id: String, fields: HashMap<String, String>, source_id: i64) -> ContactMockData {
+    pub fn new(key_id: String, fields: HashMap<String, String>, source_id: Option<i64>) -> ContactMockData {
         ContactMockData { key_id, fields, source_id }
     }
 }
@@ -254,22 +254,20 @@ impl EmarsysClient for EmarsysClientMock {
             let new_field_value = new_field_value.unwrap().to_string();
 
             let source_id = contact_value.get("source_id");
-            if source_id.is_none() {
-                return Box::new(futures::future::ok(CreateContactResponse {
-                    reply_code: Some(2013),
-                    reply_text: Some("No source ID provided".to_string()),
-                    data: None,
-                }));
-            }
-            let source_id = source_id.unwrap().as_i64();
-            if source_id.is_none() {
-                return Box::new(futures::future::ok(CreateContactResponse {
-                    reply_code: Some(10001),
-                    reply_text: Some("Source ID value should be a string".to_string()),
-                    data: None,
-                }));
-            }
-            let source_id = source_id.unwrap();
+            let source_id = if source_id.is_some() {
+                match source_id.unwrap().as_i64() {
+                    Some(source_id) => Some(source_id),
+                    None => {
+                        return Box::new(futures::future::ok(CreateContactResponse {
+                            reply_code: Some(10001),
+                            reply_text: Some("Source ID value should be a string".to_string()),
+                            data: None,
+                        }));
+                    }
+                }
+            } else {
+                None
+            };
 
             let key_field_value = contact_value.get(key_id.clone());
             if key_field_value.is_none() {
@@ -361,7 +359,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert(EMAIL_FIELD.into(), email.into());
         fields.insert(FIRST_NAME_FIELD.into(), first_name.into());
-        ContactMockData::new(EMAIL_FIELD.into(), fields, source_id.into())
+        ContactMockData::new(EMAIL_FIELD.into(), fields, Some(source_id.into()))
     }
 
     #[test]

@@ -136,7 +136,6 @@ impl EmarsysClientMock {
         let ref mut contacts = state.contacts;
 
         contacts.value.retain(|contact| {
-            //            let delete = contact.data.key_field.key == EMAIL_FIELD && contact.data.key_field.value == email;
             let delete = contact.data.key_id == EMAIL_FIELD && contact.data.fields.get(EMAIL_FIELD.into()) == Some(&email);
             if delete {
                 deleted_ids.push(contact.id)
@@ -289,12 +288,6 @@ impl EmarsysClient for EmarsysClientMock {
                 }));
             }
             let key_field_value = key_field_value.unwrap().to_string();
-
-            //            contacts_data.push(ContactMockData::new(
-            //                Field::new(key_id, key_field_value.clone()),
-            //                Field::new(new_field_key.clone(), new_field_value.clone()),
-            //                source_id,
-            //            ));
 
             let mut fields = HashMap::new();
             fields.insert(key_id.clone(), key_field_value.clone());

@@ -94,13 +94,14 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
     let emarsys_client: Arc<EmarsysClient> = if config.clone().testmode.map(|t| t.emarsys).unwrap_or(false) {
-        let emarsys_client_mock: Arc<EmarsysClient> = Arc::new(EmarsysClientImpl {
+        let emarsys_client_mock: Arc<EmarsysClient> = Arc::new(EmarsysClientMock::new());
+
+        emarsys_client_mock
+    } else {
+        let emarsys_client: Arc<EmarsysClient> = Arc::new(EmarsysClientImpl {
             config: config.emarsys.clone().expect("Emarsys config not found"),
             client_handle: client_handle.clone(),
         });
-        emarsys_client_mock
-    } else {
-        let emarsys_client: Arc<EmarsysClient> = Arc::new(EmarsysClientMock::new());
         emarsys_client
     };
 

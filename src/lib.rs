@@ -62,6 +62,8 @@ use repos::acl::RolesCacheImpl;
 use repos::repo_factory::ReposFactoryImpl;
 use services::emarsys::{EmarsysClient, EmarsysClientImpl};
 use services::mocks::emarsys::EmarsysClientMock;
+use services::mocks::sendgrid::SendgridServiceMock;
+use services::sendgrid::{SendgridService, SendgridServiceImpl};
 
 /// Starts new web service from provided `Config`
 pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option<i32>, callback: F) {
@@ -93,7 +95,7 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
-    let emarsys_client: Arc<EmarsysClient> = if config.clone().testmode.map(|t| t.emarsys).unwrap_or(false) {
+    let emarsys_client: Arc<EmarsysClient> = if config.testmode.as_ref().map(|t| t.emarsys).unwrap_or(false) {
         let emarsys_client_mock: Arc<EmarsysClient> = Arc::new(EmarsysClientMock::new());
 
         emarsys_client_mock
@@ -105,7 +107,24 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
         emarsys_client
     };
 
-    let context = StaticContext::new(db_pool, cpu_pool, client_handle, Arc::new(config), repo_factory, emarsys_client);
+    let sendgrid_service: Arc<SendgridService> = if config.testmode.as_ref().map(|t| t.sendgrid).unwrap_or(false) {
+        Arc::new(SendgridServiceMock)
+    } else {
+        Arc::new(SendgridServiceImpl {
+            config: config.sendgrid.clone(),
+            client_handle: client_handle.clone(),
+        })
+    };
+
+    let context = StaticContext::new(
+        db_pool,
+        cpu_pool,
+        client_handle,
+        Arc::new(config),
+        repo_factory,
+        emarsys_client,
+        sendgrid_service,
+    );
 
     let serve = Http::new()
         .serve_addr_handle(&address, &*handle, move || {

@@ -106,6 +106,7 @@ pub mod tests {
     use models::*;
     use repos::*;
     use services::mocks::emarsys::EmarsysClientMock;
+    use services::mocks::sendgrid::SendgridServiceMock;
     use services::*;
 
     pub const MOCK_REPO_FACTORY: ReposFactoryMock = ReposFactoryMock {};
@@ -130,6 +131,7 @@ pub mod tests {
             Arc::new(config),
             MOCK_REPO_FACTORY,
             Arc::new(emarsys_client_mock),
+            Arc::new(SendgridServiceMock),
         );
         let dynamic_context = DynamicContext::new(user_id, String::default());
 

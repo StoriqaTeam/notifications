@@ -61,6 +61,7 @@ pub struct EmarsysConf {
 #[derive(Debug, Deserialize, Clone)]
 pub struct TestmodeConf {
     pub emarsys: bool,
+    pub sendgrid: bool,
 }
 
 /// Creates new app config struct

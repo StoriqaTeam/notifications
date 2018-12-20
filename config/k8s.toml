@@ -16,3 +16,4 @@ addr = "udplog.stq.cloud:32303"
 
 [testmode]
 emarsys = true
+sendgrid = true

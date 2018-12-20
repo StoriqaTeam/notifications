@@ -16,3 +16,4 @@ registration_contact_list_id = 1
 
 [testmode]
 emarsys = true
+sendgrid = true

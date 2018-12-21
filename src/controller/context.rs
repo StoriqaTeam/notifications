@@ -15,6 +15,7 @@ use super::routes::*;
 use config::Config;
 use repos::repo_factory::*;
 use services::emarsys::EmarsysClient;
+use services::sendgrid::SendgridService;
 
 /// Static context for all app
 pub struct StaticContext<T, M, F>
@@ -30,6 +31,7 @@ where
     pub client_handle: ClientHandle,
     pub repo_factory: F,
     pub emarsys_client: Arc<EmarsysClient>,
+    pub sendgrid_service: Arc<SendgridService>,
 }
 
 impl<
@@ -46,6 +48,7 @@ impl<
         config: Arc<Config>,
         repo_factory: F,
         emarsys_client: Arc<EmarsysClient>,
+        sendgrid_service: Arc<SendgridService>,
     ) -> Self {
         let route_parser = Arc::new(create_route_parser());
         Self {
@@ -56,6 +59,7 @@ impl<
             config,
             repo_factory,
             emarsys_client,
+            sendgrid_service,
         }
     }
 }
@@ -75,6 +79,7 @@ impl<
             config: self.config.clone(),
             repo_factory: self.repo_factory.clone(),
             emarsys_client: self.emarsys_client.clone(),
+            sendgrid_service: self.sendgrid_service.clone(),
         }
     }
 }

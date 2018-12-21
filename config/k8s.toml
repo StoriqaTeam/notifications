@@ -15,4 +15,5 @@ from_name = "Storiqa"
 addr = "udplog.stq.cloud:32303"
 
 [testmode]
-emarsys = true
+emarsys = "mock"
+sendgrid = "mock"

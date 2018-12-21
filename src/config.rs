@@ -64,7 +64,6 @@ pub struct EmarsysConf {
 pub type TestmodeConf = HashMap<String, ApiMode>;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-// #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
 pub enum ApiMode {
     Real,
     Mock,

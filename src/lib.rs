@@ -95,19 +95,17 @@ pub fn start_server<F: FnOnce() + 'static>(config: config::Config, port: &Option
     let client_stream = client.stream();
     handle.spawn(client_stream.for_each(|_| Ok(())));
 
-    let emarsys_client: Arc<EmarsysClient> = if config.testmode.as_ref().map(|t| t.emarsys).unwrap_or(false) {
-        let emarsys_client_mock: Arc<EmarsysClient> = Arc::new(EmarsysClientMock::new());
-
-        emarsys_client_mock
+    let emarsys_client: Arc<EmarsysClient> = if config.testmode.as_ref().and_then(|t| t.get("emarsys")) == Some(&config::ApiMode::Mock) {
+        Arc::new(EmarsysClientMock::new())
     } else {
-        let emarsys_client: Arc<EmarsysClient> = Arc::new(EmarsysClientImpl {
+        Arc::new(EmarsysClientImpl {
             config: config.emarsys.clone().expect("Emarsys config not found"),
             client_handle: client_handle.clone(),
-        });
-        emarsys_client
+        })
     };
 
-    let sendgrid_service: Arc<SendgridService> = if config.testmode.as_ref().map(|t| t.sendgrid).unwrap_or(false) {
+    let sendgrid_service: Arc<SendgridService> = if config.testmode.as_ref().and_then(|t| t.get("sendgrid")) == Some(&config::ApiMode::Mock)
+    {
         Arc::new(SendgridServiceMock)
     } else {
         Arc::new(SendgridServiceImpl {

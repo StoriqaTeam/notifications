@@ -1,10 +1,13 @@
 //! Config module contains the top-level config for the app.
+use std::collections::HashMap;
 use std::env;
 
 use stq_http;
 use stq_logging::GrayLogConfig;
 
 use sentry_integration::SentryConfig;
+use serde::de::{Deserializer, Visitor};
+use serde::Deserialize;
 
 use config_crate::{Config as RawConfig, ConfigError, Environment, File};
 
@@ -58,10 +61,47 @@ pub struct EmarsysConf {
 }
 
 /// Testmode settings
-#[derive(Debug, Deserialize, Clone)]
-pub struct TestmodeConf {
-    pub emarsys: bool,
-    pub sendgrid: bool,
+pub type TestmodeConf = HashMap<String, ApiMode>;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+// #[derive(Debug, Deserialize, Clone, Eq, PartialEq)]
+pub enum ApiMode {
+    Real,
+    Mock,
+}
+
+const API_MODE_REAL: &'static str = "real";
+const API_MODE_MOCK: &'static str = "mock";
+
+const FIELDS: &'static [&'static str] = &[API_MODE_REAL, API_MODE_MOCK];
+
+impl<'de> Deserialize<'de> for ApiMode {
+    fn deserialize<D>(deserializer: D) -> Result<ApiMode, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_enum("ApiMode", FIELDS, ApiModeVisitor)
+    }
+}
+struct ApiModeVisitor;
+
+impl<'de> Visitor<'de> for ApiModeVisitor {
+    type Value = ApiMode;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_fmt(format_args!("`{}` or `{}`", API_MODE_REAL, API_MODE_MOCK))
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<ApiMode, E>
+    where
+        E: serde::de::Error,
+    {
+        match value {
+            API_MODE_REAL => Ok(ApiMode::Real),
+            API_MODE_MOCK => Ok(ApiMode::Mock),
+            _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
+        }
+    }
 }
 
 /// Creates new app config struct

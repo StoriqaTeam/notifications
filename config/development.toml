@@ -15,5 +15,5 @@ api_secret_key = "storiqa-secret"
 registration_contact_list_id = 1
 
 [testmode]
-emarsys = true
-sendgrid = true
+emarsys = "mock"
+sendgrid = "mock"

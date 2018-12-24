@@ -7,6 +7,8 @@ use stq_http::errors::{Codeable, PayloadCarrier};
 pub enum Error {
     #[fail(display = "Not found")]
     NotFound,
+    #[fail(display = "Contact with this key already exists")]
+    DuplicatingContactKey,
     #[fail(display = "Parse error")]
     Parse,
     #[fail(display = "Server is refusing to fullfil the request")]
@@ -21,6 +23,7 @@ impl Codeable for Error {
     fn code(&self) -> StatusCode {
         match *self {
             Error::NotFound => StatusCode::NotFound,
+            Error::DuplicatingContactKey => StatusCode::BadRequest,
             Error::Parse => StatusCode::UnprocessableEntity,
             Error::HttpClient | Error::Connection => StatusCode::InternalServerError,
             Error::Forbidden => StatusCode::Forbidden,

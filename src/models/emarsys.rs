@@ -8,6 +8,8 @@ use uuid::Uuid;
 use stq_http::request_util::XWSSE;
 use stq_types::{Alpha3, EmarsysId, UserId};
 
+use errors::Error;
+
 /// system fields
 /// [https://dev.emarsys.com/v2/personalization/contact-system-fields]
 pub const EMAIL_FIELD: &'static str = "3";
@@ -134,18 +136,32 @@ pub struct PasswordDigest {
 
 impl CreateContactResponse {
     pub fn extract_created_id(&self) -> Result<EmarsysId, FailureError> {
-        if self.reply_code == Some(0) {
-            let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
-            if let Some(ref _errors) = data.errors {
-                return Err(format_err!("Response data has errors"));
+        match self.reply_code {
+            Some(0) => {
+                let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
+                if let Some(ref _errors) = data.errors {
+                    return Err(format_err!("Response data has errors"));
+                }
+                let ids = data.ids.as_ref().ok_or(format_err!("ids field is missing"))?;
+                if ids.len() != 1 {
+                    return Err(format_err!("Expected only one id"));
+                }
+                ids.first().map(|id| EmarsysId(*id)).ok_or(format_err!("Expected only one id"))
+            },
+            Some(2009) => {
+                Err(failure::err_msg(
+                    self.reply_text
+                        .clone()
+                        .unwrap_or("Contact with this external id already exists".to_string())
+                ).context(Error::DuplicatingContactKey).into())
+            },
+            Some(code) => {
+                Err(format_err!("Reply code is {}", code))
+            },
+            None => {
+                Err(format_err!("Missing reply code in response"))
             }
-            let ids = data.ids.as_ref().ok_or(format_err!("ids field is missing"))?;
-            if ids.len() != 1 {
-                return Err(format_err!("Expected only one id"));
-            }
-            return ids.first().map(|id| EmarsysId(*id)).ok_or(format_err!("Expected only one id"));
         }
-        Err(format_err!("Reply code is not 0"))
     }
 }
 

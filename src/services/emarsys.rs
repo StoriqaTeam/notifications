@@ -94,6 +94,7 @@ where
                                 );
                             }
                             Ok((response, Err(error))) => {
+
                                 error!(
                                     "Emarsys for user {} something happend during add to contact list: {}, response: {:?}",
                                     user_id, error, response

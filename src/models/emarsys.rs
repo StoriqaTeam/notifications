@@ -147,20 +147,16 @@ impl CreateContactResponse {
                     return Err(format_err!("Expected only one id"));
                 }
                 ids.first().map(|id| EmarsysId(*id)).ok_or(format_err!("Expected only one id"))
-            },
-            Some(2009) => {
-                Err(failure::err_msg(
-                    self.reply_text
-                        .clone()
-                        .unwrap_or("Contact with this external id already exists".to_string())
-                ).context(Error::DuplicatingContactKey).into())
-            },
-            Some(code) => {
-                Err(format_err!("Reply code is {}", code))
-            },
-            None => {
-                Err(format_err!("Missing reply code in response"))
             }
+            Some(2009) => Err(failure::err_msg(
+                self.reply_text
+                    .clone()
+                    .unwrap_or("Contact with this external id already exists".to_string()),
+            )
+            .context(Error::DuplicatingContactKey)
+            .into()),
+            Some(code) => Err(format_err!("Reply code is {}", code)),
+            None => Err(format_err!("Missing reply code in response")),
         }
     }
 }

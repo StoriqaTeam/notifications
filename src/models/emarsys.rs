@@ -8,6 +8,7 @@ use uuid::Uuid;
 use stq_http::request_util::XWSSE;
 use stq_types::{Alpha3, EmarsysId, UserId};
 
+use errors::EmarsysError;
 use errors::Error;
 
 /// system fields
@@ -148,14 +149,15 @@ impl CreateContactResponse {
                 }
                 ids.first().map(|id| EmarsysId(*id)).ok_or(format_err!("Expected only one id"))
             }
-            Some(2009) => Err(failure::err_msg(
-                self.reply_text
-                    .clone()
-                    .unwrap_or("Contact with this external id already exists".to_string()),
-            )
-            .context(Error::DuplicatingContactKey)
-            .into()),
-            Some(code) => Err(format_err!("Reply code is {}", code)),
+            Some(code) => {
+                let text = self.reply_text.clone().unwrap_or(format!("Reply code is {}", code));
+                Err(failure::err_msg(text)
+                    .context(Error::Emarsys(EmarsysError {
+                        code,
+                        text: self.reply_text.clone(),
+                    }))
+                    .into())
+            }
             None => Err(format_err!("Missing reply code in response")),
         }
     }

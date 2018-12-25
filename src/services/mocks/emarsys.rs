@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ContactMockData {
     pub key_id: String,
     pub fields: HashMap<String, String>,
@@ -29,7 +29,7 @@ impl ContactMockData {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ContactMock {
     id: i64,
     data: ContactMockData,
@@ -41,7 +41,7 @@ impl ContactMock {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ContactListMock {
     pub id: i64,
     pub contacts: Vec<ContactMock>,
@@ -57,7 +57,7 @@ impl ContactListMock {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Counter<T: Clone> {
     pub id: i64,
     pub value: Vec<T>,
@@ -93,13 +93,13 @@ impl<T: Clone> Counter<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EmarsysClientMockState {
     pub contacts: Counter<ContactMock>,
     pub contact_lists: Counter<ContactListMock>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EmarsysClientMock {
     pub state: Arc<Mutex<EmarsysClientMockState>>,
 }
@@ -140,7 +140,7 @@ impl EmarsysClientMock {
             if delete {
                 deleted_ids.push(contact.id)
             }
-            delete
+            !delete
         });
 
         deleted_ids
@@ -317,6 +317,15 @@ impl EmarsysClient for EmarsysClientMock {
     }
 
     fn delete_contact(&self, email: String) -> ServiceFuture<DeleteContactResponse> {
+        let contacts = self.find_contacts(EMAIL_FIELD.to_string(), vec![email.clone()]);
+        if contacts.len() == 0 {
+            return Box::new(futures::future::ok(DeleteContactResponse {
+                reply_code: Some(13001),
+                reply_text: Some(format!("External id {} not found", email.clone())),
+                data: None
+            }));
+        }
+
         let ids = self.delete_contacts(email);
 
         let mut data_map = Map::new();
@@ -397,6 +406,10 @@ mod tests {
             create_contact_data(EMAIL_2, FIRST_NAME_2, SOURCE_ID_2),
         ];
         emarsys.create_multiple_contacts(contacts);
+        {
+            let state = emarsys.state.lock().unwrap();
+            assert_eq!(state.contacts.value.len(), 2);
+        }
 
         let response = emarsys.delete_contact(EMAIL_1.into()).wait().expect("API request failed");
         assert_eq!(response.reply_code, Some(0));
@@ -410,6 +423,14 @@ mod tests {
         } else {
             panic!("Response `data` field is not an object");
         }
+
+        {
+            let state = emarsys.state.lock().unwrap();
+            assert_eq!(state.contacts.value.len(), 1);
+        }
+
+        let response = emarsys.delete_contact(EMAIL_1.into()).wait().expect("API request failed");
+        assert_ne!(response.reply_code, Some(0));
     }
 
     #[test]

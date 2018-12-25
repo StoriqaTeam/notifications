@@ -20,6 +20,34 @@ pub const COUNTRY_FIELD: &'static str = "14";
 pub const OPT_IN: &'static str = "31";
 pub const OPT_IN_TRUE: i32 = 1;
 
+pub trait EmarsysResponse<T> {
+    fn get_reply_code(&self) -> Option<i64>;
+    fn get_reply_text(&self) -> Option<String>;
+    fn get_data(&self) -> Option<T>;
+
+    fn extract_data(&self) -> Result<T, FailureError> {
+        let reply_code = self.get_reply_code();
+
+        match reply_code {
+            Some(0) => match self.get_data() {
+                Some(data) => Ok(data),
+                None => Err(format_err!("Response data field is missing"))
+            },
+            Some(code) => {
+                let reply_text = self.get_reply_text();
+                let text = reply_text.clone().unwrap_or(format!("Reply code is {}", code));
+                Err(failure::err_msg(text)
+                    .context(Error::Emarsys(EmarsysError {
+                        code,
+                        text: reply_text.clone(),
+                    }))
+                    .into())
+            }
+            None => Err(format_err!("Missing reply code in response")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateContactPayload {
     pub user_id: UserId,
@@ -135,52 +163,75 @@ pub struct PasswordDigest {
     pub api_secret_key: ApiSecretKey,
 }
 
+impl EmarsysResponse<CreateContactResponseData> for CreateContactResponse {
+    fn get_reply_code(&self) -> Option<i64> {
+        self.reply_code
+    }
+
+    fn get_reply_text(&self) -> Option<String> {
+        self.reply_text.clone()
+    }
+
+    fn get_data(&self) -> Option<CreateContactResponseData> {
+        self.data.clone()
+    }
+}
+
 impl CreateContactResponse {
     pub fn extract_created_id(&self) -> Result<EmarsysId, FailureError> {
-        match self.reply_code {
-            Some(0) => {
-                let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
-                if let Some(ref _errors) = data.errors {
-                    return Err(format_err!("Response data has errors"));
-                }
-                let ids = data.ids.as_ref().ok_or(format_err!("ids field is missing"))?;
-                if ids.len() != 1 {
-                    return Err(format_err!("Expected only one id"));
-                }
-                ids.first().map(|id| EmarsysId(*id)).ok_or(format_err!("Expected only one id"))
-            }
-            Some(code) => {
-                let text = self.reply_text.clone().unwrap_or(format!("Reply code is {}", code));
-                Err(failure::err_msg(text)
-                    .context(Error::Emarsys(EmarsysError {
-                        code,
-                        text: self.reply_text.clone(),
-                    }))
-                    .into())
-            }
-            None => Err(format_err!("Missing reply code in response")),
+        let data = self.extract_data()?;
+        if let Some(ref _errors) = data.errors {
+            return Err(format_err!("Response data has errors"));
         }
+        let ids = data.ids.as_ref().ok_or(format_err!("ids field is missing"))?;
+        if ids.len() != 1 {
+            return Err(format_err!("Expected only one id"));
+        }
+        ids.first().map(|id| EmarsysId(*id)).ok_or(format_err!("Expected only one id"))
+    }
+}
+
+impl EmarsysResponse<AddToContactListResponseData> for AddToContactListResponse {
+    fn get_reply_code(&self) -> Option<i64> {
+        self.reply_code
+    }
+
+    fn get_reply_text(&self) -> Option<String> {
+        self.reply_text.clone()
+    }
+
+    fn get_data(&self) -> Option<AddToContactListResponseData> {
+        self.data.clone()
     }
 }
 
 impl AddToContactListResponse {
     pub fn extract_inserted_contacts(&self) -> Result<i32, FailureError> {
-        if self.reply_code == Some(0) {
-            let data = self.data.as_ref().ok_or(format_err!("data field is missing"))?;
-            return data
-                .inserted_contacts
-                .ok_or(format_err!("Expected inserted_contacts to be non-null"));
-        }
-        Err(format_err!("Reply code is not 0"))
+        let data = self.extract_data()?;
+        return data
+            .inserted_contacts
+            .ok_or(format_err!("Expected inserted_contacts to be non-null"));
+    }
+}
+
+impl EmarsysResponse<serde_json::Value> for DeleteContactResponse {
+    fn get_reply_code(&self) -> Option<i64> {
+        self.reply_code
+    }
+
+    fn get_reply_text(&self) -> Option<String> {
+        self.reply_text.clone()
+    }
+
+    fn get_data(&self) -> Option<serde_json::Value> {
+        self.data.clone()
     }
 }
 
 impl DeleteContactResponse {
     pub fn into_result(&self) -> Result<(), FailureError> {
-        if self.reply_code == Some(0) {
-            return Ok(());
-        }
-        Err(format_err!("Reply code is not 0: {:?}", self))
+        self.extract_data()?;
+        Ok(())
     }
 }
 

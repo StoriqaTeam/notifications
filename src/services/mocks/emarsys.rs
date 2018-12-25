@@ -287,6 +287,14 @@ impl EmarsysClient for EmarsysClientMock {
             }
             let key_field_value = key_field_value.unwrap().to_string();
 
+            if self.find_contacts(key_id.clone(), vec![key_field_value.clone()]).len() != 0 {
+                return Box::new(futures::future::ok(CreateContactResponse {
+                    reply_code: Some(2009),
+                    reply_text: Some(format!("Contact with external id: {} already exists", key_field_value)),
+                    data: None,
+                }));
+            }
+
             let mut fields = HashMap::new();
             fields.insert(key_id.clone(), key_field_value.clone());
             fields.insert(new_field_key.clone(), new_field_value.clone());
@@ -370,12 +378,15 @@ mod tests {
             key_id: EMAIL_FIELD.to_string(),
             contacts: vec![user_data],
         };
-        let response = emarsys.create_contact(request).wait().expect("API request failed");
+        let response = emarsys.create_contact(request.clone()).wait().expect("API request failed");
         assert_eq!(response.reply_code, Some(0));
 
         let data = response.data.clone().expect("Response `data` field is missing");
         assert_eq!(data.ids.map(|x| x.len()).unwrap_or(0), 1);
         assert_eq!(data.errors, None);
+
+        let response = emarsys.create_contact(request).wait().expect("API request failed");
+        assert_eq!(response.reply_code, Some(2009));
     }
 
     #[test]

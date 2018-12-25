@@ -7,7 +7,7 @@ use stq_http::errors::{Codeable, PayloadCarrier};
 pub enum Error {
     #[fail(display = "Not found")]
     NotFound,
-    #[fail(display = "Contact with this key already exists")]
+    #[fail(display = "Emarsys API error")]
     Emarsys(EmarsysError),
     #[fail(display = "Parse error")]
     Parse,

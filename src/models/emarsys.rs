@@ -31,7 +31,7 @@ pub trait EmarsysResponse<T> {
         match reply_code {
             Some(0) => match self.get_data() {
                 Some(data) => Ok(data),
-                None => Err(format_err!("Response data field is missing"))
+                None => Err(format_err!("Response data field is missing")),
             },
             Some(code) => {
                 let reply_text = self.get_reply_text();

@@ -322,7 +322,7 @@ impl EmarsysClient for EmarsysClientMock {
             return Box::new(futures::future::ok(DeleteContactResponse {
                 reply_code: Some(13001),
                 reply_text: Some(format!("External id {} not found", email.clone())),
-                data: None
+                data: None,
             }));
         }
 

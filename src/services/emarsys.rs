@@ -68,7 +68,7 @@ where
                 .and_then(move |(emarsys_client, emarsys_id)| {
                     info!("Emarsys create contact for {}, trying to add it to contact list", user_id);
                     let request = AddToContactListRequest::from_email(user_email);
-                    let contact_list_id = emarsys_client.get_contact_list_id();
+                    let contact_list_id = emarsys_client.get_default_contact_list_id();
                     emarsys_client
                         .add_to_contact_list(contact_list_id, request)
                         .map(|response| {
@@ -115,7 +115,7 @@ pub trait EmarsysClient: Sync + Send {
 
     fn delete_contact(&self, email: String) -> ServiceFuture<DeleteContactResponse>;
 
-    fn get_contact_list_id(&self) -> i64;
+    fn get_default_contact_list_id(&self) -> i64;
 }
 
 #[derive(Clone)]
@@ -211,7 +211,7 @@ impl EmarsysClient for EmarsysClientImpl {
         )
     }
 
-    fn get_contact_list_id(&self) -> i64 {
+    fn get_default_contact_list_id(&self) -> i64 {
         self.config.registration_contact_list_id
     }
 }

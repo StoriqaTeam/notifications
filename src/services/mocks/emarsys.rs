@@ -338,7 +338,7 @@ impl EmarsysClient for EmarsysClientMock {
         }))
     }
 
-    fn get_contact_list_id(&self) -> i64 {
+    fn get_default_contact_list_id(&self) -> i64 {
         let contact_lists = {
             let state = self.state.lock().unwrap();
             state.contact_lists.clone()

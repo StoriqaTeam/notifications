@@ -337,6 +337,19 @@ impl EmarsysClient for EmarsysClientMock {
             data: Some(JsonValue::Object(data_map)),
         }))
     }
+
+    fn get_contact_list_id(&self) -> i64 {
+        let contact_lists = {
+            let state = self.state.lock().unwrap();
+            state.contact_lists.clone()
+        };
+
+        if contact_lists.value.len() == 0 {
+            self.create_contact_list().id
+        } else {
+            contact_lists.value.last().unwrap().id
+        }
+    }
 }
 
 #[cfg(test)]

@@ -48,6 +48,9 @@ where
         let user_email = payload.email.clone();
         let context = self.static_context.clone();
         let emarsys_client = context.emarsys_client.clone();
+        if context.config.emarsys.is_none() {
+            warn!("No Emarsys config provided")
+        }
         Box::new(
             emarsys_client
                 .clone()

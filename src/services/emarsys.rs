@@ -48,73 +48,66 @@ where
         let user_email = payload.email.clone();
         let context = self.static_context.clone();
         let emarsys_client = context.emarsys_client.clone();
-        let emarsys_config = context
-            .config
-            .emarsys
-            .clone()
-            .ok_or(format_err!("Emarsys config not found for user {}", user_id))
-            .into_future();
-        let res = emarsys_config
-            .and_then(move |emarsys_config| {
-                let request = CreateContactRequest::from(payload);
-                emarsys_client
-                    .clone()
-                    .create_contact(request)
-                    .map(|r| (emarsys_client, emarsys_config, r))
-            })
-            .and_then(move |(emarsys_client, emarsys_config, response)| {
-                response
-                    .extract_created_id()
-                    .map_err(|e| {
-                        e.context(format_err!(
-                            "Emarsys for user {} error in response. Response: {:?}",
-                            user_id,
-                            response
-                        ))
-                        .into()
-                    })
-                    .map(|id| (emarsys_client, emarsys_config, id))
-            })
-            .and_then(move |(emarsys_client, emarsys_config, emarsys_id)| {
-                info!("Emarsys create contact for {}, trying to add it to contact list", user_id);
-                let request = AddToContactListRequest::from_email(user_email);
-                let contact_list_id = emarsys_config.registration_contact_list_id;
-                emarsys_client
-                    .add_to_contact_list(contact_list_id, request)
-                    .map(|response| {
-                        let inserted_contacts = response.extract_inserted_contacts();
-                        (response, inserted_contacts)
-                    })
-                    .then(move |res| {
-                        match res {
-                            Ok((_response, Ok(inserted_contacts))) => {
-                                info!(
-                                    "Emarsys for user {} added {} contact(s) to contact list",
-                                    user_id, inserted_contacts
-                                );
+        if context.config.emarsys.is_none() {
+            warn!("No Emarsys config provided")
+        }
+        Box::new(
+            emarsys_client
+                .clone()
+                .create_contact(CreateContactRequest::from(payload))
+                .and_then(move |response| {
+                    response
+                        .extract_created_id()
+                        .map_err(|e| {
+                            e.context(format_err!(
+                                "Emarsys for user {} error in response. Response: {:?}",
+                                user_id,
+                                response
+                            ))
+                            .into()
+                        })
+                        .map(|id| (emarsys_client, id))
+                })
+                .and_then(move |(emarsys_client, emarsys_id)| {
+                    info!("Emarsys create contact for {}, trying to add it to contact list", user_id);
+                    let request = AddToContactListRequest::from_email(user_email);
+                    let contact_list_id = emarsys_client.get_default_contact_list_id();
+                    emarsys_client
+                        .add_to_contact_list(contact_list_id, request)
+                        .map(|response| {
+                            let inserted_contacts = response.extract_inserted_contacts();
+                            (response, inserted_contacts)
+                        })
+                        .then(move |res| {
+                            match res {
+                                Ok((_response, Ok(inserted_contacts))) => {
+                                    info!(
+                                        "Emarsys for user {} added {} contact(s) to contact list",
+                                        user_id, inserted_contacts
+                                    );
+                                }
+                                Ok((response, Err(error))) => {
+                                    error!(
+                                        "Emarsys for user {} something happend during add to contact list: {}, response: {:?}",
+                                        user_id, error, response
+                                    );
+                                }
+                                Err(error) => {
+                                    error!("Error for user {} during add to contact list: {:?}", user_id, error);
+                                }
                             }
-                            Ok((response, Err(error))) => {
-                                error!(
-                                    "Emarsys for user {} something happend during add to contact list: {}, response: {:?}",
-                                    user_id, error, response
-                                );
-                            }
-                            Err(error) => {
-                                error!("Error for user {} during add to contact list: {:?}", user_id, error);
-                            }
-                        }
-                        Ok(emarsys_id)
-                    })
-            })
-            .then(|res| match res {
-                Ok(id) => Ok(id),
-                Err(err) => {
-                    error!("{}", err);
-                    Err(err)
-                }
-            })
-            .map(move |emarsys_id| CreatedContact { emarsys_id, user_id });
-        Box::new(res)
+                            Ok(emarsys_id)
+                        })
+                })
+                .then(|res| match res {
+                    Ok(id) => Ok(id),
+                    Err(err) => {
+                        error!("{}", err);
+                        Err(err)
+                    }
+                })
+                .map(move |emarsys_id| CreatedContact { emarsys_id, user_id }),
+        )
     }
 }
 
@@ -124,6 +117,8 @@ pub trait EmarsysClient: Sync + Send {
     fn create_contact(&self, request: CreateContactRequest) -> ServiceFuture<CreateContactResponse>;
 
     fn delete_contact(&self, email: String) -> ServiceFuture<DeleteContactResponse>;
+
+    fn get_default_contact_list_id(&self) -> i64;
 }
 
 #[derive(Clone)]
@@ -217,5 +212,9 @@ impl EmarsysClient for EmarsysClientImpl {
                         .map_err(|e| e.context(Error::HttpClient).into())
                 }),
         )
+    }
+
+    fn get_default_contact_list_id(&self) -> i64 {
+        self.config.registration_contact_list_id
     }
 }

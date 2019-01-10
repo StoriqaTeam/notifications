@@ -58,4 +58,14 @@ impl SendGridPayload {
             content,
         }
     }
+
+    pub fn get_address_list(&self) -> Vec<String> {
+        let mut addresses = vec![];
+        for p in &self.personalizations {
+            for a in &p.to {
+                addresses.push(a.email.clone());
+            }
+        }
+        addresses
+    }
 }

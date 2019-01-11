@@ -68,8 +68,9 @@ where
             })
             .map_err(|e: FailureError| e.context("Mail service, send_email_with_template endpoint error occured.").into())
             .and_then(move |payload| {
-                debug!("Sending payload: {:?}", &payload);
-                info!("prepare for sending email from template {:?}", template_name);
+                let to = payload.get_address_list().join(", ");
+                debug!("Sending email - to: {}, subject: {}", to, payload.subject);
+                info!("Sending email - template: {:?}, to: {}", template_name, to);
                 sendgrid_service
                     .send(payload)
                     .map_err(|e| e.context("SendgridService failed").into())
@@ -90,8 +91,9 @@ where
 
         let payload = SendGridPayload::from_send_mail(mail, from_email.clone(), from_name.clone(), TEXT_PLAIN);
 
-        debug!("Sending payload: {:?}", payload);
-        info!("prepare for sending simple email");
+        let to = payload.get_address_list().join(", ");
+        debug!("Sending email - to {}, subject: {}", to, payload.subject);
+        info!("Sending email - to: {}", to);
 
         Box::new(
             sendgrid_service

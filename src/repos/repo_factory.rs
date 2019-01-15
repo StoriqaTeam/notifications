@@ -73,7 +73,6 @@ impl<C: Connection<Backend = Pg, TransactionManager = AnsiTransactionManager> + 
 
 #[cfg(test)]
 pub mod tests {
-
     extern crate r2d2;
     extern crate stq_http;
 
@@ -94,6 +93,7 @@ pub mod tests {
     use diesel::ConnectionResult;
     use diesel::QueryResult;
     use diesel::Queryable;
+    use futures::Stream;
     use futures_cpupool::CpuPool;
     use r2d2::ManageConnection;
     use tokio_core::reactor::Handle;
@@ -124,6 +124,8 @@ pub mod tests {
         let config = Config::new().unwrap();
         let client = stq_http::client::Client::new(&config.to_http_config(), &handle);
         let client_handle = client.handle();
+        let client_stream = client.stream();
+        handle.spawn(client_stream.for_each(|_| Ok(())));
         let static_context = StaticContext::new(
             db_pool,
             cpu_pool,

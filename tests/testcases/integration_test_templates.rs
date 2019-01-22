@@ -1,14 +1,3 @@
-extern crate futures;
-extern crate hyper;
-extern crate notifications_lib as lib;
-extern crate serde_json;
-extern crate stq_http;
-extern crate stq_static_resources;
-extern crate stq_types;
-extern crate tokio_core;
-
-pub mod common;
-
 use hyper::Method;
 
 use std::result;
@@ -28,7 +17,7 @@ struct RpcClient {
 
 impl RpcClient {
     fn new(base_url: String, user: Option<UserId>) -> Self {
-        let (core, http_client) = common::make_utils();
+        let (core, http_client) = super::common::make_utils();
         RpcClient {
             http_client,
             core,
@@ -65,7 +54,7 @@ fn init_templates() -> Vec<TemplateVariant> {
 #[test]
 fn test_get_template_superuser() {
     let user_id = UserId(1);
-    let base_url = common::setup();
+    let base_url = super::common::setup();
     let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
@@ -80,7 +69,7 @@ fn test_get_template_superuser() {
 #[test]
 fn test_get_template_regular_user() {
     let user_id = UserId(123);
-    let base_url = common::setup();
+    let base_url = super::common::setup();
     let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
@@ -94,7 +83,7 @@ fn test_get_template_regular_user() {
 // test get template without authorization data
 #[test]
 fn test_get_template_unauthorized() {
-    let base_url = common::setup();
+    let base_url = super::common::setup();
     let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), None);
@@ -113,7 +102,7 @@ fn create_template_mock() -> String {
 #[test]
 fn test_update_template_superuser() {
     let user_id = UserId(1);
-    let base_url = common::setup();
+    let base_url = super::common::setup();
     let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
@@ -128,7 +117,7 @@ fn test_update_template_superuser() {
 #[test]
 fn test_update_template_regular_user() {
     let user_id = UserId(123);
-    let base_url = common::setup();
+    let base_url = super::common::setup();
     let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), Some(user_id));
@@ -142,7 +131,7 @@ fn test_update_template_regular_user() {
 // test update template without authorization data
 #[test]
 fn test_update_template_unauthorized() {
-    let base_url = common::setup();
+    let base_url = super::common::setup();
     let templates = init_templates();
 
     let mut rpc = RpcClient::new(base_url.clone(), None);

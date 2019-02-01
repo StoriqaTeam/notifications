@@ -59,12 +59,8 @@ where
                     response
                         .extract_created_id()
                         .map_err(|e| {
-                            e.context(format_err!(
-                                "Emarsys for user {} error in response. Response: {:?}",
-                                user_id,
-                                response
-                            ))
-                            .into()
+                            e.context(format!("Emarsys for user {} error in response. Response: {:?}", user_id, response))
+                                .into()
                         })
                         .map(|id| (emarsys_client, id))
                 })
@@ -88,7 +84,7 @@ where
                                 }
                                 Ok((response, Err(error))) => {
                                     error!(
-                                        "Emarsys for user {} something happend during add to contact list: {}, response: {:?}",
+                                        "Emarsys for user {} something happened during add to contact list: {}, response: {:?}",
                                         user_id, error, response
                                     );
                                 }
